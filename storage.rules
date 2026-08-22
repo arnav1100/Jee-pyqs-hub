@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// Firebase Storage rules for JEE PYQ Hub.
+//
+// Layout (see lib/admin-data.ts / components/admin/sections/*, and
+// components/PaymentFormModal.tsx for the user-facing upload):
+//   site/...                              — logo, QR code, and other site assets
+//   questions/{subjectId}/{chapterId}/... — question & solution images
+//   payment-proofs/{uid}/...              — user-uploaded payment screenshots
+//
+// site/** and questions/** are publicly readable (shown to every visitor)
+// but only admins (custom claim `admin: true`) may upload/overwrite/delete.
+// payment-proofs/{uid}/** is private: only that user and admins may read or
+// write it, since screenshots can contain personal/financial info.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /site/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /questions/{subjectId}/{chapterId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /payment-proofs/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isOwner(uid);
+    }
+
+    // Deny everything else by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
