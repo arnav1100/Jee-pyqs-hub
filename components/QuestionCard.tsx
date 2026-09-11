@@ -5,6 +5,7 @@ import clsx from 'clsx'
 import { Bookmark, CheckCircle2, XCircle } from 'lucide-react'
 import type { Question } from '@/data/mockData'
 import DifficultyBadge from './DifficultyBadge'
+import MathText from './MathText'
 
 interface QuestionCardProps {
   question: Question
@@ -38,7 +39,7 @@ export default function QuestionCard({
         </span>
       </div>
 
-      <p className="text-[15px] leading-relaxed text-ink-900">{question.text}</p>
+      <MathText as="p" text={question.text} className="text-[15px] leading-relaxed text-ink-900" />
 
       {question.imageUrl && (
         <div className="relative mt-3 aspect-video w-full overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
@@ -79,7 +80,7 @@ export default function QuestionCard({
               >
                 {opt.id}
               </span>
-              <span className="pt-0.5 text-ink-800">{opt.text}</span>
+              <MathText as="span" text={opt.text} className="pt-0.5 text-ink-800" />
               {revealCorrect && <CheckCircle2 size={16} className="ml-auto shrink-0 text-easy" />}
               {revealWrong && <XCircle size={16} className="ml-auto shrink-0 text-difficult" />}
             </button>
@@ -90,7 +91,7 @@ export default function QuestionCard({
       {showSolution && (
         <div className="mt-4 rounded-xl bg-brand-50/60 p-3.5 text-sm text-ink-800 ring-1 ring-brand-100">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-700">Solution</p>
-          {question.solution}
+          <MathText text={question.solution} />
         </div>
       )}
 

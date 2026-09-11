@@ -15,6 +15,7 @@ import {
 } from '@/lib/admin-data'
 import type { Difficulty, ExamType } from '@/data/mockData'
 import AdminModal from '../AdminModal'
+import MathText from '@/components/MathText'
 
 const DIFFICULTIES: Difficulty[] = ['Easy', 'Moderate', 'Difficult']
 const EXAM_TYPES: ExamType[] = ['JEE Main', 'JEE Advanced']
@@ -186,7 +187,9 @@ export default function QuestionsManager() {
                 {q.number}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 text-sm text-ink-900">{q.text}</p>
+                <p className="line-clamp-2 text-sm text-ink-900">
+                  <MathText text={q.text} />
+                </p>
                 <p className="mt-1 text-xs text-slate-500">
                   {q.difficulty} · {q.examType} · {q.year} · {q.shift || 'No shift'}
                 </p>

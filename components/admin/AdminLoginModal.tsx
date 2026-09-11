@@ -28,8 +28,10 @@ export default function AdminLoginModal({ open, onClose, redirectOnSuccess = tru
     setError(null)
     setBusy(true)
     try {
-      await loginWithEmail(email, password)
-      const admin = await refreshAdmin()
+      const credential = await loginWithEmail(email, password)
+      // Pass the freshly-returned user directly — don't rely on the auth
+      // context's `user` state, which can still be stale right after login.
+      const admin = await refreshAdmin(credential.user)
       if (!admin) {
         await logout()
         setError('This account does not have admin access.')

@@ -8,6 +8,7 @@ import { useSubjects, useChapters, useQuestions } from '@/lib/content'
 import QuestionNavigator from '@/components/QuestionNavigator'
 import DifficultyBadge from '@/components/DifficultyBadge'
 import PremiumGate from '@/components/PremiumGate'
+import MathText from '@/components/MathText'
 import { useAuth } from '@/lib/auth-context'
 import { recordAttempt } from '@/lib/stats'
 
@@ -162,7 +163,9 @@ function TestPageContent() {
                 ) : (
                   <span className="h-[18px] w-[18px] shrink-0 rounded-full border-2 border-slate-200" />
                 )}
-                <span className="flex-1 truncate text-sm text-ink-800">Q{q.number}. {q.text}</span>
+                <span className="flex-1 truncate text-sm text-ink-800">
+                  Q{q.number}. <MathText text={q.text} />
+                </span>
                 <DifficultyBadge difficulty={q.difficulty} />
               </div>
             )
@@ -219,7 +222,7 @@ function TestPageContent() {
             <span className="font-semibold text-ink-800">Q{question.number}</span>
             <DifficultyBadge difficulty={question.difficulty} />
           </div>
-          <p className="text-[15px] leading-relaxed text-ink-900">{question.text}</p>
+          <MathText as="p" text={question.text} className="text-[15px] leading-relaxed text-ink-900" />
 
           <div className="mt-4 space-y-2">
             {question.options.map((opt) => {
@@ -239,7 +242,7 @@ function TestPageContent() {
                   >
                     {opt.id}
                   </span>
-                  <span className="text-ink-800">{opt.text}</span>
+                  <MathText as="span" text={opt.text} className="text-ink-800" />
                 </button>
               )
             })}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Lexend } from 'next/font/google'
+import 'katex/dist/katex.min.css'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth-context'
 import SiteChrome from '@/components/SiteChrome'

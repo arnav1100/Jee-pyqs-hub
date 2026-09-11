@@ -21,6 +21,19 @@
   }
 }
 
+@layer base {
+  /* KaTeX: keep math visually in line with the site's type scale and
+     make sure long equations/reactions scroll horizontally instead of
+     overflowing question cards on mobile (see components/MathText.tsx,
+     which wraps every rendered expression in a scrollable span). */
+  .katex {
+    font-size: 1.05em;
+  }
+  .katex-display {
+    margin: 0.35em 0;
+  }
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
