@@ -34,7 +34,7 @@ interface AuthContextValue {
   loading: boolean
   isAdmin: boolean
   adminChecked: boolean
-  refreshAdmin: () => Promise<boolean>
+  refreshAdmin: (overrideUser?: User | null) => Promise<boolean>
   profile: UserProfile | null
   profileLoading: boolean
   access: AccessStatus
@@ -139,8 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
 
-  const refreshAdmin = useCallback(async () => {
-    const admin = await checkIsAdmin(user, true)
+  const refreshAdmin = useCallback(async (overrideUser?: User | null) => {
+    const admin = await checkIsAdmin(overrideUser !== undefined ? overrideUser : user, true)
     setIsAdmin(admin)
     setAdminChecked(true)
     return admin
