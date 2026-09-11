@@ -5,7 +5,6 @@ import clsx from 'clsx'
 import { Bookmark, CheckCircle2, XCircle } from 'lucide-react'
 import type { Question } from '@/data/mockData'
 import DifficultyBadge from './DifficultyBadge'
-import katex from 'katex'
 
 interface QuestionCardProps {
   question: Question
@@ -14,25 +13,6 @@ interface QuestionCardProps {
   isBookmarked: boolean
   onSelectOption: (optionId: string) => void
   onToggleBookmark: () => void
-}
-
-// LaTeX and Math rendering helper function
-function RenderMath({ text }: { text: string }) {
-  if (!text) return null
-
-  // Check if text contains LaTeX formatting backslashes
-  if (text.includes('\\')) {
-    try {
-      const html = katex.renderToString(text, {
-        throwOnError: false,
-      })
-      return <span dangerouslySetInnerHTML={{ __html: html }} />
-    } catch {
-      return <span>{text}</span>
-    }
-  }
-
-  return <span>{text}</span>
 }
 
 export default function QuestionCard({
@@ -58,9 +38,7 @@ export default function QuestionCard({
         </span>
       </div>
 
-      <div className="text-[15px] leading-relaxed text-ink-900">
-        <RenderMath text={question.text} />
-      </div>
+      <p className="text-[15px] leading-relaxed text-ink-900">{question.text}</p>
 
       {question.imageUrl && (
         <div className="relative mt-3 aspect-video w-full overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
@@ -101,9 +79,7 @@ export default function QuestionCard({
               >
                 {opt.id}
               </span>
-              <div className="pt-0.5 text-ink-800">
-                <RenderMath text={opt.text} />
-              </div>
+              <span className="pt-0.5 text-ink-800">{opt.text}</span>
               {revealCorrect && <CheckCircle2 size={16} className="ml-auto shrink-0 text-easy" />}
               {revealWrong && <XCircle size={16} className="ml-auto shrink-0 text-difficult" />}
             </button>
@@ -114,7 +90,7 @@ export default function QuestionCard({
       {showSolution && (
         <div className="mt-4 rounded-xl bg-brand-50/60 p-3.5 text-sm text-ink-800 ring-1 ring-brand-100">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-700">Solution</p>
-          <RenderMath text={question.solution} />
+          {question.solution}
         </div>
       )}
 
