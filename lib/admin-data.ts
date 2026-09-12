@@ -275,7 +275,7 @@ export async function addQuestion(
     const chapterSnap = await tx.get(chapterRef)
     if (!chapterSnap.exists())
       throw new Error(
-        Chapter no longer exists (debug: subjectId="${subjectId}", chapterId="${chapterId}", path="${chapterRef.path}")
+        'Chapter no longer exists (debug: subjectId="' + subjectId + '", chapterId="' + chapterId + '", path="' + chapterRef.path + '")'
       )
     const currentTotal = (chapterSnap.data().totalQuestions as number) || 0
     const number = currentTotal + 1
