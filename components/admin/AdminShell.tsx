@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   Menu,
   X,
+  UploadCloud,
 } from 'lucide-react'
 import { useState } from 'react'
 import { logout } from '@/lib/firebase'
@@ -23,6 +24,7 @@ export type AdminSection =
   | 'subjects'
   | 'chapters'
   | 'questions'
+  | 'bulk-import'
   | 'users'
   | 'payments'
   | 'settings'
@@ -32,6 +34,7 @@ const NAV_ITEMS: { key: AdminSection; label: string; icon: typeof LayoutDashboar
   { key: 'subjects', label: 'Subjects', icon: BookOpen },
   { key: 'chapters', label: 'Chapters', icon: Layers },
   { key: 'questions', label: 'Questions', icon: HelpCircle },
+  { key: 'bulk-import', label: 'Bulk Import', icon: UploadCloud },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'payments', label: 'Payments', icon: Wallet },
   { key: 'settings', label: 'Settings', icon: SettingsIcon },

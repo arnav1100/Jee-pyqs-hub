@@ -16,7 +16,8 @@
     "firebase": "^10.12.4",
     "lucide-react": "^0.400.0",
     "clsx": "^2.1.1",
-    "katex": "^0.16.11"
+    "katex": "^0.16.11",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.19",

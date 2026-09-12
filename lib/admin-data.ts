@@ -527,3 +527,56 @@ export function useAdminOverview() {
     pendingPayments,
   }
 }
+const chapterRef = doc(db, 'subjects', subject.id, 'chapters', chapterId)
+    const subjectRef = doc(db, 'subjects', subject.id)
+
+    let newEasy = 0
+    let newModerate = 0
+    let newDifficult = 0
+    const CHUNK = 400
+
+    for (let i = 0; i < groupRows.length; i += CHUNK) {
+      const chunk = groupRows.slice(i, i + CHUNK)
+      const batch = writeBatch(db)
+      chunk.forEach((row, idx) => {
+        const qRef = doc(collection(db, 'subjects', subject.id, 'chapters', chapterId, 'questions'))
+        const options: Option[] = [
+          { id: 'A', text: row.optionA },
+          { id: 'B', text: row.optionB },
+          { id: 'C', text: row.optionC },
+          { id: 'D', text: row.optionD },
+        ]
+        batch.set(qRef, {
+          text: row.text,
+          options,
+          correctOptionId: row.correct,
+          solution: row.solution,
+          difficulty: row.difficulty,
+          examType: row.examType,
+          year: row.year,
+          shift: row.shift || '',
+          topic: row.topic || '',
+          chapterSlug,
+          number: currentTotal + i + idx + 1,
+          createdAt: serverTimestamp(),
+        })
+        if (row.difficulty === 'Easy') newEasy++
+        else if (row.difficulty === 'Moderate') newModerate++
+        else newDifficult++
+      })
+      await batch.commit()
+      imported += chunk.length
+      onProgress?.(imported, total)
+    }
+
+    await updateDoc(chapterRef, {
+      totalQuestions: increment(groupRows.length),
+      easy: increment(newEasy),
+      moderate: increment(newModerate),
+      difficult: increment(newDifficult),
+    })
+    await updateDoc(subjectRef, { totalQuestions: increment(groupRows.length) })
+  }
+
+  return { imported, errors }
+}

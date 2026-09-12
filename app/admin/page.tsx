@@ -10,6 +10,7 @@ import DashboardOverview from '@/components/admin/sections/DashboardOverview'
 import SubjectsManager from '@/components/admin/sections/SubjectsManager'
 import ChaptersManager from '@/components/admin/sections/ChaptersManager'
 import QuestionsManager from '@/components/admin/sections/QuestionsManager'
+import BulkImportManager from '@/components/admin/sections/BulkImportManager'
 import UsersManager from '@/components/admin/sections/UsersManager'
 import PaymentsManager from '@/components/admin/sections/PaymentsManager'
 import SettingsManager from '@/components/admin/sections/SettingsManager'
@@ -65,6 +66,7 @@ export default function AdminPage() {
       {section === 'subjects' && <SubjectsManager />}
       {section === 'chapters' && <ChaptersManager />}
       {section === 'questions' && <QuestionsManager />}
+{section === 'bulk-import' && <BulkImportManager />}
       {section === 'users' && <UsersManager />}
       {section === 'payments' && <PaymentsManager />}
       {section === 'settings' && <SettingsManager />}
