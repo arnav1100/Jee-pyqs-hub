@@ -151,6 +151,7 @@ export default function QuestionsManager() {
               </option>
             ))}
           </select>
+          <p style={{color: 'red', fontSize: '10px'}}>DEBUG chapters: {JSON.stringify(chapters.map(c => ({id: c.id, name: c.name})))}</p>
           <select value={chapterId} onChange={(e) => setChapterId(e.target.value)} className="admin-input max-w-[220px]">
             {chapters.length === 0 && <option value="">No chapters</option>}
             {chapters.map((c) => (
