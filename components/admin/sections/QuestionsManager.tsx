@@ -334,6 +334,7 @@ export default function QuestionsManager() {
 
           {error && <p className="text-xs font-medium text-difficult">{error}</p>}
 
+<p className="text-[10px] text-red-500">MODAL DEBUG: subjectId={subjectId} chapterId={chapterId}</p>
           <button
             type="submit"
             disabled={busy || uploadingField !== null}
