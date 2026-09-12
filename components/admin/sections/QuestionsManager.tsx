@@ -52,7 +52,7 @@ export default function QuestionsManager() {
     setChapterId('')
   }, [subjectId])
   useEffect(() => {
-    if (!chapterId && chapters.length > 0) setChapterId(chapters[0].id)
+    if (chapters.length > 0 && !chapters.some((c) => c.id === chapterId)) setChapterId(chapters[0].id)
   }, [chapters, chapterId])
 
   const { questions, loading } = useAdminQuestions(subjectId || undefined, chapterId || undefined)
