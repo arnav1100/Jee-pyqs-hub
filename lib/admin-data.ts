@@ -527,56 +527,347 @@ export function useAdminOverview() {
     pendingPayments,
   }
 }
-const chapterRef = doc(db, 'subjects', subject.id, 'chapters', chapterId)
-    const subjectRef = doc(db, 'subjects', subject.id)
+/* ------------------------------ Bulk Import ---------------------------------- */
 
-    let newEasy = 0
-    let newModerate = 0
-    let newDifficult = 0
-    const CHUNK = 400
 
-    for (let i = 0; i < groupRows.length; i += CHUNK) {
-      const chunk = groupRows.slice(i, i + CHUNK)
-      const batch = writeBatch(db)
-      chunk.forEach((row, idx) => {
-        const qRef = doc(collection(db, 'subjects', subject.id, 'chapters', chapterId, 'questions'))
-        const options: Option[] = [
-          { id: 'A', text: row.optionA },
-          { id: 'B', text: row.optionB },
-          { id: 'C', text: row.optionC },
-          { id: 'D', text: row.optionD },
-        ]
-        batch.set(qRef, {
-          text: row.text,
-          options,
-          correctOptionId: row.correct,
-          solution: row.solution,
-          difficulty: row.difficulty,
-          examType: row.examType,
-          year: row.year,
-          shift: row.shift || '',
-          topic: row.topic || '',
-          chapterSlug,
-          number: currentTotal + i + idx + 1,
-          createdAt: serverTimestamp(),
-        })
-        if (row.difficulty === 'Easy') newEasy++
-        else if (row.difficulty === 'Moderate') newModerate++
-        else newDifficult++
-      })
-      await batch.commit()
-      imported += chunk.length
-      onProgress?.(imported, total)
-    }
 
-    await updateDoc(chapterRef, {
-      totalQuestions: increment(groupRows.length),
-      easy: increment(newEasy),
-      moderate: increment(newModerate),
-      difficult: increment(newDifficult),
-    })
-    await updateDoc(subjectRef, { totalQuestions: increment(groupRows.length) })
-  }
+export interface BulkQuestionRow {
 
-  return { imported, errors }
+subjectName: string
+
+chapterName: string
+
+text: string
+
+optionA: string
+
+optionB: string
+
+optionC: string
+
+optionD: string
+
+correct: 'A' | 'B' | 'C' | 'D'
+
+solution: string
+
+difficulty: Difficulty
+
+examType: ExamType
+
+year: number
+
+shift: string
+
+topic: string
+
 }
+
+
+
+export interface BulkImportError {
+
+row: number
+
+message: string
+
+}
+
+
+
+function slugify(name: string) {
+
+return name
+
+.trim()
+
+.toLowerCase()
+
+.replace(/[^a-z0-9]+/g, '-')
+
+.replace(/(^-|-$)/g, '')
+
+}
+
+
+
+/**
+
+* Imports many questions at once from parsed spreadsheet rows.
+
+* Groups rows by subject+chapter, creates any chapter that doesn't already
+
+* exist (matched by name, case-insensitive), and writes questions in
+
+* batches of 400 to stay under Firestore's 500-operation batch limit.
+
+* Chapter/subject question counters are updated once per chapter at the
+
+* end, rather than per question, to keep this fast for large imports.
+
+*/
+
+export async function bulkImportQuestions(
+
+rows: BulkQuestionRow[],
+
+subjects: AdminSubject[],
+
+onProgress?: (done: number, total: number) => void
+
+): Promise<{ imported: number; errors: BulkImportError[] }> {
+
+const errors: BulkImportError[] = []
+
+const validRows: (BulkQuestionRow & { rowIndex: number })[] = []
+
+
+
+rows.forEach((r, i) => {
+
+const rowIndex = i + 2 // +1 for header row, +1 for 1-indexing
+
+if (
+
+!r.subjectName?.trim() ||
+
+!r.chapterName?.trim() ||
+
+!r.text?.trim() ||
+
+!r.optionA?.trim() ||
+
+!r.optionB?.trim() ||
+
+!r.optionC?.trim() ||
+
+!r.optionD?.trim() ||
+
+!r.correct?.trim() ||
+
+!r.solution?.trim()
+
+) {
+
+errors.push({ row: rowIndex, message: 'Missing a required field (subject/chapter/question/options/correct/solution)' })
+
+return
+
+}
+
+if (!['A', 'B', 'C', 'D'].includes(r.correct.trim().toUpperCase())) {
+
+errors.push({ row: rowIndex, message: `Correct answer must be A, B, C or D (got "${r.correct}")` })
+
+return
+
+}
+
+if (!['Easy', 'Moderate', 'Difficult'].includes(r.difficulty)) {
+
+errors.push({ row: rowIndex, message: `Difficulty must be Easy, Moderate or Difficult (got "${r.difficulty}")` })
+
+return
+
+}
+
+if (!['JEE Main', 'JEE Advanced'].includes(r.examType)) {
+
+errors.push({ row: rowIndex, message: `Exam must be "JEE Main" or "JEE Advanced" (got "${r.examType}")` })
+
+return
+
+}
+
+validRows.push({ ...r, correct: r.correct.trim().toUpperCase() as 'A' | 'B' | 'C' | 'D', rowIndex })
+
+})
+
+
+
+const groups = new Map<string, (BulkQuestionRow & { rowIndex: number })[]>()
+
+for (const row of validRows) {
+
+const key = `${row.subjectName.trim().toLowerCase()}|||${row.chapterName.trim().toLowerCase()}`
+
+if (!groups.has(key)) groups.set(key, [])
+
+groups.get(key)!.push(row)
+
+}
+
+
+
+let imported = 0
+
+const total = validRows.length
+
+
+
+for (const groupRows of groups.values()) {
+
+const subjectName = groupRows[0].subjectName.trim()
+
+const chapterName = groupRows[0].chapterName.trim()
+
+const subject = subjects.find((s) => s.name.trim().toLowerCase() === subjectName.toLowerCase())
+
+
+
+if (!subject) {
+
+groupRows.forEach((r) => errors.push({ row: r.rowIndex, message: `Subject "${subjectName}" not found in the app` }))
+
+continue
+
+}
+
+
+
+const chaptersSnap = await getDocs(collection(db, 'subjects', subject.id, 'chapters'))
+
+const existingChapterDoc = chaptersSnap.docs.find(
+
+(d) => ((d.data().name as string) || '').trim().toLowerCase() === chapterName.toLowerCase()
+
+)
+
+
+
+let chapterId: string
+
+let chapterSlug: string
+
+let currentTotal: number
+
+
+
+if (existingChapterDoc) {
+
+chapterId = existingChapterDoc.id
+
+const data = existingChapterDoc.data()
+
+chapterSlug = data.slug || slugify(chapterName)
+
+currentTotal = (data.totalQuestions as number) || 0
+
+} else {
+
+chapterSlug = slugify(chapterName)
+
+chapterId = await addChapter(subject.id, { slug: chapterSlug, name: chapterName })
+
+currentTotal = 0
+
+}
+
+
+
+const chapterRef = doc(db, 'subjects', subject.id, 'chapters', chapterId)
+
+const subjectRef = doc(db, 'subjects', subject.id)
+
+
+
+let newEasy = 0
+
+let newModerate = 0
+
+let newDifficult = 0
+
+const CHUNK = 400
+
+
+
+for (let i = 0; i < groupRows.length; i += CHUNK) {
+
+const chunk = groupRows.slice(i, i + CHUNK)
+
+const batch = writeBatch(db)
+
+chunk.forEach((row, idx) => {
+
+const qRef = doc(collection(db, 'subjects', subject.id, 'chapters', chapterId, 'questions'))
+
+const options: Option[] = [
+
+{ id: 'A', text: row.optionA },
+
+{ id: 'B', text: row.optionB },
+
+{ id: 'C', text: row.optionC },
+
+{ id: 'D', text: row.optionD },
+
+]
+
+batch.set(qRef, {
+
+text: row.text,
+
+options,
+
+correctOptionId: row.correct,
+
+solution: row.solution,
+
+difficulty: row.difficulty,
+
+examType: row.examType,
+
+year: row.year,
+
+shift: row.shift || '',
+
+topic: row.topic || '',
+
+chapterSlug,
+
+number: currentTotal + i + idx + 1,
+
+createdAt: serverTimestamp(),
+
+})
+
+if (row.difficulty === 'Easy') newEasy++
+
+else if (row.difficulty === 'Moderate') newModerate++
+
+else newDifficult++
+
+})
+
+await batch.commit()
+
+imported += chunk.length
+
+onProgress?.(imported, total)
+
+}
+
+
+
+await updateDoc(chapterRef, {
+
+totalQuestions: increment(groupRows.length),
+
+easy: increment(newEasy),
+
+moderate: increment(newModerate),
+
+difficult: increment(newDifficult),
+
+})
+
+await updateDoc(subjectRef, { totalQuestions: increment(groupRows.length) })
+
+}
+
+
+
+return { imported, errors }
+
+} 
+
