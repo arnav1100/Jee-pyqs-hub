@@ -13,13 +13,13 @@ export default function SubjectCard({ subject }: { subject: SubjectDoc }) {
 
   return (
     <Link
-      href={/${subject.slug}}
+      href={'/' + subject.slug}
       className="group relative flex flex-col overflow-hidden rounded-xl2 border-0 p-6 shadow-card transition hover:-translate-y-1 hover:shadow-lg"
-      style={{ background: linear-gradient(160deg, ${subject.colorFrom}18, ${subject.colorTo}0D) }}
+      style={{ background: 'linear-gradient(160deg, ' + subject.colorFrom + '18, ' + subject.colorTo + '0D)' }}
     >
       <div
         className="mb-4 grid h-14 w-14 place-items-center rounded-2xl text-white shadow-md"
-        style={{ background: linear-gradient(135deg, ${subject.colorFrom}, ${subject.colorTo}) }}
+        style={{ background: 'linear-gradient(135deg, ' + subject.colorFrom + ', ' + subject.colorTo + ')' }}
       >
         <Icon size={26} />
       </div>
