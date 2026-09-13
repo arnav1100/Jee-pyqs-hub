@@ -29,8 +29,19 @@
   .katex {
     font-size: 1.05em;
   }
-  .katex-display {
+ .katex-display {
     margin: 0.35em 0;
+  }
+  /* Long equations/reactions can scroll horizontally on narrow screens,
+     but without a chunky always-visible scrollbar cluttering every
+     question — the content still scrolls fine with a finger/trackpad. */
+  .katex-scroll {
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* old Edge/IE */
+  }
+  .katex-scroll::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, new Edge */
   }
 }
 

@@ -27,6 +27,22 @@
 
 import { useMemo } from 'react'
 import katex from 'katex'
+// ---------------------------------------------------------------------
+// 0. Repair a specific, common data-corruption pattern: some upstream
+//    tool (e.g. a naive text/JSON un-escaper) treats the two characters
+//    "\t" as an actual TAB character instead of the start of a LaTeX
+//    command like \text{...} or \times. That silently eats the
+//    backslash *and* the "t", leaving behind "ext{...}", "imes", etc.
+//    Only patterns that are unambiguous (a real English word never looks
+//    like this) are auto-repaired; anything else is left as-is rather
+//    than guessed at.
+// ---------------------------------------------------------------------
+function repairCorruptedLatex(input: string): string {
+  return input
+    .replace(/(^|[^a-zA-Z\\])ext\{/g, '$1\\text{')
+    .replace(/(^|[^a-zA-Z\\])imes(?![a-zA-Z])/g, '$1\\times')
+    .replace(/(^|[^a-zA-Z\\])heta(?![a-zA-Z])/g, '$1\\theta')
+}
 
 type Segment =
   | { type: 'text'; content: string }
@@ -316,7 +332,7 @@ interface MathTextProps {
 }
 
 export default function MathText({ text, as = 'span', className }: MathTextProps) {
-  const segments = useMemo(() => parseSegments(text || ''), [text])
+  const segments = useMemo(() => parseSegments(repairCorruptedLatex(text || '')), [text])
 
   if (!text) return null
 
@@ -344,7 +360,7 @@ export default function MathText({ text, as = 'span', className }: MathTextProps
         return (
           <span
             key={idx}
-            className={displayMode ? 'block max-w-full overflow-x-auto py-1 align-middle' : 'max-w-full overflow-x-auto align-middle inline-block'}
+            className={displayMode ? 'katex-scroll block max-w-full py-1 align-middle' : 'katex-scroll inline-block max-w-full align-middle'}
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )
