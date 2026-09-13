@@ -13,35 +13,35 @@ export default function SubjectCard({ subject }: { subject: SubjectDoc }) {
 
   return (
     <Link
-      href={`/${subject.slug}`}
-      className="group relative flex flex-col overflow-hidden rounded-xl2 border border-slate-200 bg-white p-5 shadow-card transition hover:-translate-y-0.5 hover:shadow-lg"
+      href={/${subject.slug}}
+      className="group relative flex flex-col overflow-hidden rounded-xl2 border-0 p-6 shadow-card transition hover:-translate-y-1 hover:shadow-lg"
+      style={{ background: linear-gradient(160deg, ${subject.colorFrom}18, ${subject.colorTo}0D) }}
     >
       <div
-        className="absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-10 transition group-hover:opacity-20"
-        style={{ background: `linear-gradient(135deg, ${subject.colorFrom}, ${subject.colorTo})` }}
-      />
-      <div
-        className="mb-4 grid h-11 w-11 place-items-center rounded-xl text-white"
-        style={{ background: `linear-gradient(135deg, ${subject.colorFrom}, ${subject.colorTo})` }}
+        className="mb-4 grid h-14 w-14 place-items-center rounded-2xl text-white shadow-md"
+        style={{ background: linear-gradient(135deg, ${subject.colorFrom}, ${subject.colorTo}) }}
       >
-        <Icon size={22} />
+        <Icon size={26} />
       </div>
 
-      <h3 className="font-display text-lg font-bold text-ink-900">{subject.name}</h3>
+      <h3 className="font-display text-xl font-bold text-ink-900">{subject.name}</h3>
 
-      <div className="mt-3 flex items-center gap-4 text-sm text-slate-500">
+      <div className="mt-3 flex items-center gap-4 text-sm text-slate-600">
         <span>
-          <strong className="font-semibold text-ink-800">{subject.totalChapters}</strong> Chapters
+          <strong className="font-bold text-ink-800">{subject.totalChapters}</strong> Chapters
         </span>
         <span className="h-1 w-1 rounded-full bg-slate-300" />
         <span>
-          <strong className="font-semibold text-ink-800">{subject.totalQuestions.toLocaleString()}</strong> Questions
+          <strong className="font-bold text-ink-800">{subject.totalQuestions.toLocaleString()}</strong> Questions
         </span>
       </div>
 
-      <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600">
+      <span
+        className="mt-5 inline-flex items-center gap-1.5 text-sm font-bold"
+        style={{ color: subject.colorTo }}
+      >
         Explore Chapters
-        <ArrowRight size={15} className="transition group-hover:translate-x-1" />
+        <ArrowRight size={16} className="transition group-hover:translate-x-1" />
       </span>
     </Link>
   )
