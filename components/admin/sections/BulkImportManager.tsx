@@ -9,10 +9,15 @@ const TEMPLATE_HEADERS = [
   'Subject',
   'Chapter',
   'Question',
+  'Question Image URL',
   'Option A',
+  'Option A Image URL',
   'Option B',
+  'Option B Image URL',
   'Option C',
+  'Option C Image URL',
   'Option D',
+  'Option D Image URL',
   'Correct (A/B/C/D)',
   'Solution',
   'Difficulty (Easy/Moderate/Difficult)',
@@ -27,10 +32,15 @@ function downloadTemplate() {
     'Chemistry',
     'Alcohols, Phenols and Ethers',
     "\\text{Compound with Alcohol and Double bond} \\xrightarrow{\\text{H}_3\\text{O}^+} \\text{'B' (major)}",
+    '',
     'Option A text',
+    '',
     'Option B text',
+    '',
     'Option C text',
+    '',
     'Option D text',
+    '',
     'A',
     'Explain the answer here',
     'Easy',
@@ -50,10 +60,15 @@ function parseRows(raw: any[]): BulkQuestionRow[] {
     subjectName: String(r['Subject'] ?? '').trim(),
     chapterName: String(r['Chapter'] ?? '').trim(),
     text: String(r['Question'] ?? '').trim(),
+    questionImageUrl: String(r['Question Image URL'] ?? '').trim(),
     optionA: String(r['Option A'] ?? '').trim(),
+    optionAImageUrl: String(r['Option A Image URL'] ?? '').trim(),
     optionB: String(r['Option B'] ?? '').trim(),
+    optionBImageUrl: String(r['Option B Image URL'] ?? '').trim(),
     optionC: String(r['Option C'] ?? '').trim(),
+    optionCImageUrl: String(r['Option C Image URL'] ?? '').trim(),
     optionD: String(r['Option D'] ?? '').trim(),
+    optionDImageUrl: String(r['Option D Image URL'] ?? '').trim(),
     correct: String(r['Correct (A/B/C/D)'] ?? '').trim().toUpperCase() as 'A' | 'B' | 'C' | 'D',
     solution: String(r['Solution'] ?? '').trim(),
     difficulty: String(r['Difficulty (Easy/Moderate/Difficult)'] ?? '').trim() as any,
@@ -120,6 +135,8 @@ export default function BulkImportManager() {
         <p className="mt-1 text-sm text-slate-500">
           Fill your questions into this spreadsheet — one row per question. The Subject and Chapter names
           must match what's already in the app (a new Chapter will be created automatically if it doesn't exist yet).
+          For questions/options that are structure diagrams rather than plain text, leave the text column empty
+          and paste an image URL in the matching "Image URL" column instead — the site will show the image there.
         </p>
         <button
           onClick={downloadTemplate}

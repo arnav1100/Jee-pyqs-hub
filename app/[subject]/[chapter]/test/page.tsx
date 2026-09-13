@@ -242,7 +242,16 @@ function TestPageContent() {
                   >
                     {opt.id}
                   </span>
-                  <MathText as="span" text={opt.text} className="text-ink-800" />
+                  {opt.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={opt.imageUrl}
+                      alt={`Option ${opt.id}`}
+                      className="max-h-40 w-auto max-w-full rounded-lg border border-slate-100 object-contain"
+                    />
+                  ) : (
+                    <MathText as="span" text={opt.text} className="text-ink-800" />
+                  )}
                 </button>
               )
             })}

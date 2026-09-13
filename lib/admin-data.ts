@@ -532,35 +532,25 @@ export function useAdminOverview() {
 
 
 export interface BulkQuestionRow {
-
-subjectName: string
-
-chapterName: string
-
-text: string
-
-optionA: string
-
-optionB: string
-
-optionC: string
-
-optionD: string
-
-correct: 'A' | 'B' | 'C' | 'D'
-
-solution: string
-
-difficulty: Difficulty
-
-examType: ExamType
-
-year: number
-
-shift: string
-
-topic: string
-
+  subjectName: string
+  chapterName: string
+  text: string
+  optionA: string
+  optionB: string
+  optionC: string
+  optionD: string
+  optionAImageUrl?: string
+  optionBImageUrl?: string
+  optionCImageUrl?: string
+  optionDImageUrl?: string
+  questionImageUrl?: string
+  correct: 'A' | 'B' | 'C' | 'D'
+  solution: string
+  difficulty: Difficulty
+  examType: ExamType
+  year: number
+  shift: string
+  topic: string
 }
 
 
@@ -628,32 +618,19 @@ rows.forEach((r, i) => {
 const rowIndex = i + 2 // +1 for header row, +1 for 1-indexing
 
 if (
-
-!r.subjectName?.trim() ||
-
-!r.chapterName?.trim() ||
-
-!r.text?.trim() ||
-
-!r.optionA?.trim() ||
-
-!r.optionB?.trim() ||
-
-!r.optionC?.trim() ||
-
-!r.optionD?.trim() ||
-
-!r.correct?.trim() ||
-
-!r.solution?.trim()
-
-) {
-
-errors.push({ row: rowIndex, message: 'Missing a required field (subject/chapter/question/options/correct/solution)' })
-
-return
-
-}
+      !r.subjectName?.trim() ||
+      !r.chapterName?.trim() ||
+      !r.text?.trim() ||
+      (!r.optionA?.trim() && !r.optionAImageUrl?.trim()) ||
+      (!r.optionB?.trim() && !r.optionBImageUrl?.trim()) ||
+      (!r.optionC?.trim() && !r.optionCImageUrl?.trim()) ||
+      (!r.optionD?.trim() && !r.optionDImageUrl?.trim()) ||
+      !r.correct?.trim() ||
+      !r.solution?.trim()
+    ) {
+      errors.push({ row: rowIndex, message: 'Missing a required field (subject/chapter/question/options (text or image)/correct/solution)' })
+      return
+    }
 
 if (!['A', 'B', 'C', 'D'].includes(r.correct.trim().toUpperCase())) {
 
@@ -792,24 +769,16 @@ chunk.forEach((row, idx) => {
 const qRef = doc(collection(db, 'subjects', subject.id, 'chapters', chapterId, 'questions'))
 
 const options: Option[] = [
-
-{ id: 'A', text: row.optionA },
-
-{ id: 'B', text: row.optionB },
-
-{ id: 'C', text: row.optionC },
-
-{ id: 'D', text: row.optionD },
-
-]
-
-batch.set(qRef, {
-
-text: row.text,
-
-options,
-
-correctOptionId: row.correct,
+          { id: 'A', text: row.optionA, ...(row.optionAImageUrl?.trim() ? { imageUrl: row.optionAImageUrl.trim() } : {}) },
+          { id: 'B', text: row.optionB, ...(row.optionBImageUrl?.trim() ? { imageUrl: row.optionBImageUrl.trim() } : {}) },
+          { id: 'C', text: row.optionC, ...(row.optionCImageUrl?.trim() ? { imageUrl: row.optionCImageUrl.trim() } : {}) },
+          { id: 'D', text: row.optionD, ...(row.optionDImageUrl?.trim() ? { imageUrl: row.optionDImageUrl.trim() } : {}) },
+        ]
+        batch.set(qRef, {
+          text: row.text,
+          options,
+          ...(row.questionImageUrl?.trim() ? { imageUrl: row.questionImageUrl.trim() } : {}),
+          correctOptionId: row.correct,
 
 solution: row.solution,
 

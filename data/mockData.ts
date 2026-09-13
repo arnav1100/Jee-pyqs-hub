@@ -23,6 +23,7 @@ export interface Chapter {
 export interface Option {
   id: 'A' | 'B' | 'C' | 'D'
   text: string
+  imageUrl?: string
 }
 
 export interface Question {

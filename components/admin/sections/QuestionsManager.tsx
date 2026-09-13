@@ -63,7 +63,9 @@ export default function QuestionsManager() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [uploadingField, setUploadingField] = useState<'imageUrl' | 'solutionImageUrl' | null>(null)
+  const [uploadingField, setUploadingField] = useState
+    'imageUrl' | 'solutionImageUrl' | 'optionA' | 'optionB' | 'optionC' | 'optionD' | null
+  >(null)
 
   const chapterSlug = chapters.find((c) => c.id === chapterId)?.slug || ''
 
@@ -106,11 +108,27 @@ export default function QuestionsManager() {
     }
   }
 
+  async function handleOptionImageUpload(file: File, optionIndex: number, uploadKey: 'optionA' | 'optionB' | 'optionC' | 'optionD') {
+    setUploadingField(uploadKey)
+    try {
+      const path = `questions/${subjectId}/${chapterId}/${uploadKey}-${Date.now()}-${file.name}`
+      const url = await uploadImage(file, path)
+      setForm((f) => ({
+        ...f,
+        options: f.options.map((o, oi) => (oi === optionIndex ? { ...o, imageUrl: url } : o)),
+      }))
+    } catch {
+      setError('Image upload failed. Check your Storage rules and try again.')
+    } finally {
+      setUploadingField(null)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!subjectId || !chapterId) return
-    if (!form.text.trim() || form.options.some((o) => !o.text.trim()) || !form.solution.trim()) {
-      setError('Question text, all four options, and a solution are required.')
+    if (!form.text.trim() || form.options.some((o) => !o.text.trim() && !o.imageUrl?.trim()) || !form.solution.trim()) {
+      setError('Question text, a solution, and all four options (text or image) are required.')
       return
     }
     setBusy(true)
@@ -231,20 +249,37 @@ export default function QuestionsManager() {
           />
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {form.options.map((opt, i) => (
-              <Field key={opt.id} label={`Option ${opt.id}`}>
-                <input
-                  value={opt.text}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      options: f.options.map((o, oi) => (oi === i ? { ...o, text: e.target.value } : o)),
-                    }))
-                  }
-                  className="admin-input"
-                />
-              </Field>
-            ))}
+            {form.options.map((opt, i) => {
+              const uploadKey = (['optionA', 'optionB', 'optionC', 'optionD'] as const)[i]
+              return (
+                <div key={opt.id} className="space-y-2">
+                  <Field label={`Option ${opt.id} text (leave blank if using an image)`}>
+                    <input
+                      value={opt.text}
+                      onChange={(e) =>
+                        setForm((f) => ({
+                          ...f,
+                          options: f.options.map((o, oi) => (oi === i ? { ...o, text: e.target.value } : o)),
+                        }))
+                      }
+                      className="admin-input"
+                    />
+                  </Field>
+                  <ImageField
+                    label={`Option ${opt.id} image (optional)`}
+                    url={opt.imageUrl}
+                    uploading={uploadingField === uploadKey}
+                    onUpload={(file) => handleOptionImageUpload(file, i, uploadKey)}
+                    onClear={() =>
+                      setForm((f) => ({
+                        ...f,
+                        options: f.options.map((o, oi) => (oi === i ? { ...o, imageUrl: '' } : o)),
+                      }))
+                    }
+                  />
+                </div>
+              )
+            })}
           </div>
 
           <Field label="Correct Answer">
