@@ -1,5 +1,6 @@
 export type Difficulty = 'Easy' | 'Moderate' | 'Difficult'
 export type ExamType = 'JEE Main' | 'JEE Advanced'
+export type QuestionType = 'mcq' | 'numerical'
 
 export interface Subject {
   slug: 'physics' | 'chemistry' | 'mathematics'
@@ -32,8 +33,11 @@ export interface Question {
   number: number
   text: string
   imageUrl?: string
+  questionType?: QuestionType
   options: Option[]
-  correctOptionId: Option['id']
+  correctOptionId?: Option['id']
+  correctAnswer?: number
+  answerTolerance?: number
   solution: string
   difficulty: Difficulty
   examType: ExamType

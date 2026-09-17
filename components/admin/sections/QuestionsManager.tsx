@@ -13,7 +13,7 @@ import {
   type AdminQuestion,
   type AdminQuestionInput,
 } from '@/lib/admin-data'
-import type { Difficulty, ExamType } from '@/data/mockData'
+import type { Difficulty, ExamType, QuestionType } from '@/data/mockData'
 import AdminModal from '../AdminModal'
 import MathText from '@/components/MathText'
 
@@ -23,6 +23,7 @@ const EXAM_TYPES: ExamType[] = ['JEE Main', 'JEE Advanced']
 const EMPTY_FORM: AdminQuestionInput = {
   text: '',
   imageUrl: '',
+  questionType: 'mcq',
   options: [
     { id: 'A', text: '' },
     { id: 'B', text: '' },
@@ -30,6 +31,8 @@ const EMPTY_FORM: AdminQuestionInput = {
     { id: 'D', text: '' },
   ],
   correctOptionId: 'A',
+  correctAnswer: undefined,
+  answerTolerance: undefined,
   solution: '',
   solutionImageUrl: '',
   difficulty: 'Easy',
@@ -63,7 +66,7 @@ export default function QuestionsManager() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [uploadingField, setUploadingField] = useState<
+  const [uploadingField, setUploadingField] = useState
     'imageUrl' | 'solutionImageUrl' | 'optionA' | 'optionB' | 'optionC' | 'optionD' | null
   >(null)
 
@@ -81,8 +84,11 @@ export default function QuestionsManager() {
     setForm({
       text: question.text,
       imageUrl: question.imageUrl || '',
-      options: question.options,
-      correctOptionId: question.correctOptionId,
+      questionType: question.questionType || 'mcq',
+      options: question.options && question.options.length > 0 ? question.options : EMPTY_FORM.options,
+      correctOptionId: question.correctOptionId || 'A',
+      correctAnswer: question.correctAnswer,
+      answerTolerance: question.answerTolerance,
       solution: question.solution,
       solutionImageUrl: question.solutionImageUrl || '',
       difficulty: question.difficulty,
@@ -98,7 +104,7 @@ export default function QuestionsManager() {
   async function handleImageUpload(file: File, field: 'imageUrl' | 'solutionImageUrl') {
     setUploadingField(field)
     try {
-      const path = `questions/${subjectId}/${chapterId}/${field}-${Date.now()}-${file.name}`
+      const path = 'questions/' + subjectId + '/' + chapterId + '/' + field + '-' + Date.now() + '-' + file.name
       const url = await uploadImage(file, path)
       setForm((f) => ({ ...f, [field]: url }))
     } catch {
@@ -111,7 +117,7 @@ export default function QuestionsManager() {
   async function handleOptionImageUpload(file: File, optionIndex: number, uploadKey: 'optionA' | 'optionB' | 'optionC' | 'optionD') {
     setUploadingField(uploadKey)
     try {
-      const path = `questions/${subjectId}/${chapterId}/${uploadKey}-${Date.now()}-${file.name}`
+      const path = 'questions/' + subjectId + '/' + chapterId + '/' + uploadKey + '-' + Date.now() + '-' + file.name
       const url = await uploadImage(file, path)
       setForm((f) => ({
         ...f,
@@ -127,17 +133,34 @@ export default function QuestionsManager() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!subjectId || !chapterId) return
-    if (!form.text.trim() || form.options.some((o) => !o.text.trim() && !o.imageUrl?.trim()) || !form.solution.trim()) {
-      setError('Question text, a solution, and all four options (text or image) are required.')
+    if (!form.text.trim() || !form.solution.trim()) {
+      setError('Question text and a solution are required.')
+      return
+    }
+    if (form.questionType === 'numerical') {
+      if (form.correctAnswer === undefined || Number.isNaN(form.correctAnswer)) {
+        setError('A numerical correct answer is required.')
+        return
+      }
+    } else if (form.options.some((o) => !o.text.trim() && !o.imageUrl?.trim())) {
+      setError('All four options (text or image) are required.')
       return
     }
     setBusy(true)
     setError(null)
+    let payload: AdminQuestionInput
+    if (form.questionType === 'numerical') {
+      const { correctOptionId, ...rest } = form
+      payload = { ...rest, options: [] }
+    } else {
+      const { correctAnswer, answerTolerance, ...rest } = form
+      payload = rest
+    }
     try {
       if (editing) {
-        await updateQuestion(subjectId, chapterId, editing.id, editing.difficulty, form)
+        await updateQuestion(subjectId, chapterId, editing.id, editing.difficulty, payload)
       } else {
-        await addQuestion(subjectId, chapterId, chapterSlug, form)
+        await addQuestion(subjectId, chapterId, chapterSlug, payload)
       }
       setModalOpen(false)
     } catch (err: any) {
@@ -148,7 +171,7 @@ export default function QuestionsManager() {
   }
 
   async function handleDelete(question: AdminQuestion) {
-    if (!confirm(`Delete question #${question.number}?`)) return
+    if (!confirm('Delete question #' + question.number + '?')) return
     setDeletingId(question.id)
     try {
       await deleteQuestion(subjectId, chapterId, question.id, question.difficulty)
@@ -169,7 +192,6 @@ export default function QuestionsManager() {
               </option>
             ))}
           </select>
-          <p style={{color: 'red', fontSize: '10px'}}>DEBUG chapters: {JSON.stringify(chapters.map(c => ({id: c.id, name: c.name})))}</p>
           <select value={chapterId} onChange={(e) => setChapterId(e.target.value)} className="admin-input max-w-[220px]">
             {chapters.length === 0 && <option value="">No chapters</option>}
             {chapters.map((c) => (
@@ -229,7 +251,7 @@ export default function QuestionsManager() {
         </div>
       )}
 
-      <AdminModal open={modalOpen} title={editing ? `Edit Question #${editing.number}` : 'Add Question'} onClose={() => setModalOpen(false)} wide>
+      <AdminModal open={modalOpen} title={editing ? 'Edit Question #' + editing.number : 'Add Question'} onClose={() => setModalOpen(false)} wide>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Field label="Question Text">
             <textarea
@@ -248,53 +270,97 @@ export default function QuestionsManager() {
             onClear={() => setForm((f) => ({ ...f, imageUrl: '' }))}
           />
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {form.options.map((opt, i) => {
-              const uploadKey = (['optionA', 'optionB', 'optionC', 'optionD'] as const)[i]
-              return (
-                <div key={opt.id} className="space-y-2">
-                  <Field label={`Option ${opt.id} text (leave blank if using an image)`}>
-                    <input
-                      value={opt.text}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          options: f.options.map((o, oi) => (oi === i ? { ...o, text: e.target.value } : o)),
-                        }))
-                      }
-                      className="admin-input"
-                    />
-                  </Field>
-                  <ImageField
-                    label={`Option ${opt.id} image (optional)`}
-                    url={opt.imageUrl}
-                    uploading={uploadingField === uploadKey}
-                    onUpload={(file) => handleOptionImageUpload(file, i, uploadKey)}
-                    onClear={() =>
-                      setForm((f) => ({
-                        ...f,
-                        options: f.options.map((o, oi) => (oi === i ? { ...o, imageUrl: '' } : o)),
-                      }))
-                    }
-                  />
-                </div>
-              )
-            })}
-          </div>
-
-          <Field label="Correct Answer">
+          <Field label="Question Type">
             <select
-              value={form.correctOptionId}
-              onChange={(e) => setForm((f) => ({ ...f, correctOptionId: e.target.value as AdminQuestionInput['correctOptionId'] }))}
+              value={form.questionType || 'mcq'}
+              onChange={(e) => setForm((f) => ({ ...f, questionType: e.target.value as QuestionType }))}
               className="admin-input"
             >
-              {form.options.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.id}
-                </option>
-              ))}
+              <option value="mcq">Multiple Choice</option>
+              <option value="numerical">Numerical (type-in-answer)</option>
             </select>
           </Field>
+
+          {form.questionType === 'numerical' ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Correct Numerical Answer">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.correctAnswer === undefined ? '' : String(form.correctAnswer)}
+                  onChange={(e) => {
+                    const num = Number(e.target.value)
+                    setForm((f) => ({ ...f, correctAnswer: e.target.value.trim() === '' || Number.isNaN(num) ? undefined : num }))
+                  }}
+                  placeholder="e.g. 20"
+                  className="admin-input"
+                />
+              </Field>
+              <Field label="Tolerance (optional, default 0.01)">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={form.answerTolerance === undefined ? '' : String(form.answerTolerance)}
+                  onChange={(e) => {
+                    const num = Number(e.target.value)
+                    setForm((f) => ({ ...f, answerTolerance: e.target.value.trim() === '' || Number.isNaN(num) ? undefined : num }))
+                  }}
+                  placeholder="e.g. 0.1"
+                  className="admin-input"
+                />
+              </Field>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {form.options.map((opt, i) => {
+                  const uploadKey = (['optionA', 'optionB', 'optionC', 'optionD'] as const)[i]
+                  return (
+                    <div key={opt.id} className="space-y-2">
+                      <Field label={'Option ' + opt.id + ' text (leave blank if using an image)'}>
+                        <input
+                          value={opt.text}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              options: f.options.map((o, oi) => (oi === i ? { ...o, text: e.target.value } : o)),
+                            }))
+                          }
+                          className="admin-input"
+                        />
+                      </Field>
+                      <ImageField
+                        label={'Option ' + opt.id + ' image (optional)'}
+                        url={opt.imageUrl}
+                        uploading={uploadingField === uploadKey}
+                        onUpload={(file) => handleOptionImageUpload(file, i, uploadKey)}
+                        onClear={() =>
+                          setForm((f) => ({
+                            ...f,
+                            options: f.options.map((o, oi) => (oi === i ? { ...o, imageUrl: '' } : o)),
+                          }))
+                        }
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+
+              <Field label="Correct Answer">
+                <select
+                  value={form.correctOptionId}
+                  onChange={(e) => setForm((f) => ({ ...f, correctOptionId: e.target.value as AdminQuestionInput['correctOptionId'] }))}
+                  className="admin-input"
+                >
+                  {form.options.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.id}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </>
+          )}
 
           <Field label="Solution Text">
             <textarea
@@ -369,7 +435,6 @@ export default function QuestionsManager() {
 
           {error && <p className="text-xs font-medium text-difficult">{error}</p>}
 
-<p className="text-[10px] text-red-500">MODAL DEBUG: subjectId={subjectId} chapterId={chapterId}</p>
           <button
             type="submit"
             disabled={busy || uploadingField !== null}

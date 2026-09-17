@@ -20,7 +20,7 @@ import {
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import { db, storage } from './firebase'
-import type { Difficulty, ExamType, Option } from '@/data/mockData'
+import type { Difficulty, ExamType, Option, QuestionType } from '@/data/mockData'
 
 const MONTHLY_PLAN_DAYS = 30
 
@@ -50,8 +50,11 @@ export interface AdminChapter {
 export interface AdminQuestionInput {
   text: string
   imageUrl?: string
+  questionType?: QuestionType
   options: Option[]
-  correctOptionId: Option['id']
+  correctOptionId?: Option['id']
+  correctAnswer?: number
+  answerTolerance?: number
   solution: string
   solutionImageUrl?: string
   difficulty: Difficulty
@@ -535,6 +538,7 @@ export interface BulkQuestionRow {
   subjectName: string
   chapterName: string
   text: string
+  questionType?: string
   optionA: string
   optionB: string
   optionC: string
@@ -545,6 +549,8 @@ export interface BulkQuestionRow {
   optionDImageUrl?: string
   questionImageUrl?: string
   correct: 'A' | 'B' | 'C' | 'D'
+  numericalAnswer?: string
+  numericalTolerance?: string
   solution: string
   difficulty: Difficulty
   examType: ExamType
@@ -556,287 +562,200 @@ export interface BulkQuestionRow {
 
 
 export interface BulkImportError {
-
-row: number
-
-message: string
-
+  row: number
+  message: string
 }
-
-
 
 function slugify(name: string) {
-
-return name
-
-.trim()
-
-.toLowerCase()
-
-.replace(/[^a-z0-9]+/g, '-')
-
-.replace(/(^-|-$)/g, '')
-
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
 }
 
-
-
-/**
-
-* Imports many questions at once from parsed spreadsheet rows.
-
-* Groups rows by subject+chapter, creates any chapter that doesn't already
-
-* exist (matched by name, case-insensitive), and writes questions in
-
-* batches of 400 to stay under Firestore's 500-operation batch limit.
-
-* Chapter/subject question counters are updated once per chapter at the
-
-* end, rather than per question, to keep this fast for large imports.
-
-*/
+function normalizeQuestionText(text: string) {
+  return text.trim().toLowerCase().replace(/\s+/g, ' ')
+}
 
 export async function bulkImportQuestions(
+  rows: BulkQuestionRow[],
+  subjects: AdminSubject[],
+  onProgress?: (done: number, total: number) => void
+): Promise<{ imported: number; duplicates: number; errors: BulkImportError[] }> {
+  const errors: BulkImportError[] = []
+  const validRows: (BulkQuestionRow & { rowIndex: number; resolvedType: QuestionType })[] = []
 
-rows: BulkQuestionRow[],
+  rows.forEach((r, i) => {
+    const rowIndex = i + 2
+    const typeRaw = (r.questionType || 'mcq').trim().toLowerCase()
+    const resolvedType: QuestionType = typeRaw === 'numerical' ? 'numerical' : 'mcq'
 
-subjects: AdminSubject[],
+    if (!r.subjectName?.trim() || !r.chapterName?.trim() || !r.text?.trim() || !r.solution?.trim()) {
+      errors.push({ row: rowIndex, message: 'Missing a required field (subject/chapter/question/solution)' })
+      return
+    }
+    if (!['Easy', 'Moderate', 'Difficult'].includes(r.difficulty)) {
+      errors.push({ row: rowIndex, message: 'Difficulty must be Easy, Moderate or Difficult (got "' + r.difficulty + '")' })
+      return
+    }
+    if (!['JEE Main', 'JEE Advanced'].includes(r.examType)) {
+      errors.push({ row: rowIndex, message: 'Exam must be "JEE Main" or "JEE Advanced" (got "' + r.examType + '")' })
+      return
+    }
 
-onProgress?: (done: number, total: number) => void
+    if (resolvedType === 'numerical') {
+      const num = Number(r.numericalAnswer)
+      if (r.numericalAnswer === undefined || r.numericalAnswer.trim() === '' || Number.isNaN(num)) {
+        errors.push({ row: rowIndex, message: 'Numerical Answer must be a number for a Numerical question' })
+        return
+      }
+      validRows.push({ ...r, correct: 'A', rowIndex, resolvedType })
+      return
+    }
 
-): Promise<{ imported: number; errors: BulkImportError[] }> {
-
-const errors: BulkImportError[] = []
-
-const validRows: (BulkQuestionRow & { rowIndex: number })[] = []
-
-
-
-rows.forEach((r, i) => {
-
-const rowIndex = i + 2 // +1 for header row, +1 for 1-indexing
-
-if (
-      !r.subjectName?.trim() ||
-      !r.chapterName?.trim() ||
-      !r.text?.trim() ||
+    if (
       (!r.optionA?.trim() && !r.optionAImageUrl?.trim()) ||
       (!r.optionB?.trim() && !r.optionBImageUrl?.trim()) ||
       (!r.optionC?.trim() && !r.optionCImageUrl?.trim()) ||
       (!r.optionD?.trim() && !r.optionDImageUrl?.trim()) ||
-      !r.correct?.trim() ||
-      !r.solution?.trim()
+      !r.correct?.trim()
     ) {
-      errors.push({ row: rowIndex, message: 'Missing a required field (subject/chapter/question/options (text or image)/correct/solution)' })
+      errors.push({ row: rowIndex, message: 'Missing a required field (options (text or image)/correct)' })
       return
     }
+    if (!['A', 'B', 'C', 'D'].includes(r.correct.trim().toUpperCase())) {
+      errors.push({ row: rowIndex, message: 'Correct answer must be A, B, C or D (got "' + r.correct + '")' })
+      return
+    }
+    validRows.push({ ...r, correct: r.correct.trim().toUpperCase() as 'A' | 'B' | 'C' | 'D', rowIndex, resolvedType })
+  })
+
+  const groups = new Map<string, (BulkQuestionRow & { rowIndex: number; resolvedType: QuestionType })[]>()
+  for (const row of validRows) {
+    const key = row.subjectName.trim().toLowerCase() + '|||' + row.chapterName.trim().toLowerCase()
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(row)
+  }
+
+  let imported = 0
+  let duplicates = 0
+  const total = validRows.length
+
+  for (const groupRows of groups.values()) {
+    const subjectName = groupRows[0].subjectName.trim()
+    const chapterName = groupRows[0].chapterName.trim()
+    const subject = subjects.find((s) => s.name.trim().toLowerCase() === subjectName.toLowerCase())
+
+    if (!subject) {
+      groupRows.forEach((r) => errors.push({ row: r.rowIndex, message: 'Subject "' + subjectName + '" not found in the app' }))
+      continue
+    }
+
+    const chaptersSnap = await getDocs(collection(db, 'subjects', subject.id, 'chapters'))
+    const existingChapterDoc = chaptersSnap.docs.find(
+      (d) => ((d.data().name as string) || '').trim().toLowerCase() === chapterName.toLowerCase()
+    )
+
+    let chapterId: string
+    let chapterSlug: string
+    let currentTotal: number
+
+    if (existingChapterDoc) {
+      chapterId = existingChapterDoc.id
+      const data = existingChapterDoc.data()
+      chapterSlug = data.slug || slugify(chapterName)
+      currentTotal = (data.totalQuestions as number) || 0
+    } else {
+      chapterSlug = slugify(chapterName)
+      chapterId = await addChapter(subject.id, { slug: chapterSlug, name: chapterName })
+      currentTotal = 0
+    }
+
+    const chapterRef = doc(db, 'subjects', subject.id, 'chapters', chapterId)
+    const subjectRef = doc(db, 'subjects', subject.id)
+
+    const existingQuestionsSnap = await getDocs(
+      collection(db, 'subjects', subject.id, 'chapters', chapterId, 'questions')
+    )
+    const seenTexts = new Set<string>()
+    existingQuestionsSnap.docs.forEach((d) => {
+      const t = (d.data().text as string) || ''
+      if (t) seenTexts.add(normalizeQuestionText(t))
+    })
+
+    const rowsToWrite: typeof groupRows = []
+    for (const row of groupRows) {
+      const normalized = normalizeQuestionText(row.text)
+      if (seenTexts.has(normalized)) {
+        duplicates += 1
+        continue
+      }
+      seenTexts.add(normalized)
+      rowsToWrite.push(row)
+    }
+
+    let newEasy = 0
+    let newModerate = 0
+    let newDifficult = 0
+    const CHUNK = 400
+
+    for (let i = 0; i < rowsToWrite.length; i += CHUNK) {
+      const chunk = rowsToWrite.slice(i, i + CHUNK)
+      const batch = writeBatch(db)
+      chunk.forEach((row, idx) => {
+        const qRef = doc(collection(db, 'subjects', subject.id, 'chapters', chapterId, 'questions'))
+        const isNumerical = row.resolvedType === 'numerical'
+
+        const options: Option[] = isNumerical
+          ? []
+          : [
+              { id: 'A', text: row.optionA, ...(row.optionAImageUrl?.trim() ? { imageUrl: row.optionAImageUrl.trim() } : {}) },
+              { id: 'B', text: row.optionB, ...(row.optionBImageUrl?.trim() ? { imageUrl: row.optionBImageUrl.trim() } : {}) },
+              { id: 'C', text: row.optionC, ...(row.optionCImageUrl?.trim() ? { imageUrl: row.optionCImageUrl.trim() } : {}) },
+              { id: 'D', text: row.optionD, ...(row.optionDImageUrl?.trim() ? { imageUrl: row.optionDImageUrl.trim() } : {}) },
+            ]
 
-if (!['A', 'B', 'C', 'D'].includes(r.correct.trim().toUpperCase())) {
-
-errors.push({ row: rowIndex, message: `Correct answer must be A, B, C or D (got "${r.correct}")` })
-
-return
-
-}
-
-if (!['Easy', 'Moderate', 'Difficult'].includes(r.difficulty)) {
-
-errors.push({ row: rowIndex, message: `Difficulty must be Easy, Moderate or Difficult (got "${r.difficulty}")` })
-
-return
-
-}
-
-if (!['JEE Main', 'JEE Advanced'].includes(r.examType)) {
-
-errors.push({ row: rowIndex, message: `Exam must be "JEE Main" or "JEE Advanced" (got "${r.examType}")` })
-
-return
-
-}
-
-validRows.push({ ...r, correct: r.correct.trim().toUpperCase() as 'A' | 'B' | 'C' | 'D', rowIndex })
-
-})
-
-
-
-const groups = new Map<string, (BulkQuestionRow & { rowIndex: number })[]>()
-
-for (const row of validRows) {
-
-const key = `${row.subjectName.trim().toLowerCase()}|||${row.chapterName.trim().toLowerCase()}`
-
-if (!groups.has(key)) groups.set(key, [])
-
-groups.get(key)!.push(row)
-
-}
-
-
-
-let imported = 0
-
-const total = validRows.length
-
-
-
-for (const groupRows of groups.values()) {
-
-const subjectName = groupRows[0].subjectName.trim()
-
-const chapterName = groupRows[0].chapterName.trim()
-
-const subject = subjects.find((s) => s.name.trim().toLowerCase() === subjectName.toLowerCase())
-
-
-
-if (!subject) {
-
-groupRows.forEach((r) => errors.push({ row: r.rowIndex, message: `Subject "${subjectName}" not found in the app` }))
-
-continue
-
-}
-
-
-
-const chaptersSnap = await getDocs(collection(db, 'subjects', subject.id, 'chapters'))
-
-const existingChapterDoc = chaptersSnap.docs.find(
-
-(d) => ((d.data().name as string) || '').trim().toLowerCase() === chapterName.toLowerCase()
-
-)
-
-
-
-let chapterId: string
-
-let chapterSlug: string
-
-let currentTotal: number
-
-
-
-if (existingChapterDoc) {
-
-chapterId = existingChapterDoc.id
-
-const data = existingChapterDoc.data()
-
-chapterSlug = data.slug || slugify(chapterName)
-
-currentTotal = (data.totalQuestions as number) || 0
-
-} else {
-
-chapterSlug = slugify(chapterName)
-
-chapterId = await addChapter(subject.id, { slug: chapterSlug, name: chapterName })
-
-currentTotal = 0
-
-}
-
-
-
-const chapterRef = doc(db, 'subjects', subject.id, 'chapters', chapterId)
-
-const subjectRef = doc(db, 'subjects', subject.id)
-
-
-
-let newEasy = 0
-
-let newModerate = 0
-
-let newDifficult = 0
-
-const CHUNK = 400
-
-
-
-for (let i = 0; i < groupRows.length; i += CHUNK) {
-
-const chunk = groupRows.slice(i, i + CHUNK)
-
-const batch = writeBatch(db)
-
-chunk.forEach((row, idx) => {
-
-const qRef = doc(collection(db, 'subjects', subject.id, 'chapters', chapterId, 'questions'))
-
-const options: Option[] = [
-          { id: 'A', text: row.optionA, ...(row.optionAImageUrl?.trim() ? { imageUrl: row.optionAImageUrl.trim() } : {}) },
-          { id: 'B', text: row.optionB, ...(row.optionBImageUrl?.trim() ? { imageUrl: row.optionBImageUrl.trim() } : {}) },
-          { id: 'C', text: row.optionC, ...(row.optionCImageUrl?.trim() ? { imageUrl: row.optionCImageUrl.trim() } : {}) },
-          { id: 'D', text: row.optionD, ...(row.optionDImageUrl?.trim() ? { imageUrl: row.optionDImageUrl.trim() } : {}) },
-        ]
         batch.set(qRef, {
           text: row.text,
+          questionType: row.resolvedType,
           options,
           ...(row.questionImageUrl?.trim() ? { imageUrl: row.questionImageUrl.trim() } : {}),
-          correctOptionId: row.correct,
+          ...(isNumerical
+            ? {
+                correctAnswer: Number(row.numericalAnswer),
+                ...(row.numericalTolerance?.trim() ? { answerTolerance: Number(row.numericalTolerance) } : {}),
+              }
+            : { correctOptionId: row.correct }),
+          solution: row.solution,
+          difficulty: row.difficulty,
+          examType: row.examType,
+          year: row.year,
+          shift: row.shift || '',
+          topic: row.topic || '',
+          chapterSlug,
+          number: currentTotal + i + idx + 1,
+          createdAt: serverTimestamp(),
+        })
+        if (row.difficulty === 'Easy') newEasy++
+        else if (row.difficulty === 'Moderate') newModerate++
+        else newDifficult++
+      })
+      await batch.commit()
+      imported += chunk.length
+      onProgress?.(imported + duplicates, total)
+    }
 
-solution: row.solution,
+    if (rowsToWrite.length > 0) {
+      await updateDoc(chapterRef, {
+        totalQuestions: increment(rowsToWrite.length),
+        easy: increment(newEasy),
+        moderate: increment(newModerate),
+        difficult: increment(newDifficult),
+      })
+      await updateDoc(subjectRef, { totalQuestions: increment(rowsToWrite.length) })
+    }
+  }
 
-difficulty: row.difficulty,
-
-examType: row.examType,
-
-year: row.year,
-
-shift: row.shift || '',
-
-topic: row.topic || '',
-
-chapterSlug,
-
-number: currentTotal + i + idx + 1,
-
-createdAt: serverTimestamp(),
-
-})
-
-if (row.difficulty === 'Easy') newEasy++
-
-else if (row.difficulty === 'Moderate') newModerate++
-
-else newDifficult++
-
-})
-
-await batch.commit()
-
-imported += chunk.length
-
-onProgress?.(imported, total)
-
+  return { imported, duplicates, errors }
 }
-
-
-
-await updateDoc(chapterRef, {
-
-totalQuestions: increment(groupRows.length),
-
-easy: increment(newEasy),
-
-moderate: increment(newModerate),
-
-difficult: increment(newDifficult),
-
-})
-
-await updateDoc(subjectRef, { totalQuestions: increment(groupRows.length) })
-
-}
-
-
-
-return { imported, errors }
-
-} 
-

@@ -5,6 +5,7 @@ import { notFound, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Eye, Loader2, ChevronLeft as Back } from 'lucide-react'
 import { useSubjects, useChapters, useQuestions } from '@/lib/content'
+import { isAnswerCorrect } from '@/lib/answers'
 import QuestionNavigator from '@/components/QuestionNavigator'
 import QuestionCard from '@/components/QuestionCard'
 import ProgressBar from '@/components/ProgressBar'
@@ -100,7 +101,7 @@ function PracticePageContent() {
       chapterQuestions.forEach((q) => {
         const given = answers[q.id]
         if (!given) return
-        if (given === q.correctOptionId) correctCount += 1
+        if (isAnswerCorrect(q, given)) correctCount += 1
         else wrongCount += 1
       })
       return {

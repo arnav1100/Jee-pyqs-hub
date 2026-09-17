@@ -5,6 +5,7 @@ import { notFound, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Timer, CheckCircle2, XCircle, RotateCcw, Loader2 } from 'lucide-react'
 import { useSubjects, useChapters, useQuestions } from '@/lib/content'
+import { isAnswerCorrect } from '@/lib/answers'
 import QuestionNavigator from '@/components/QuestionNavigator'
 import DifficultyBadge from '@/components/DifficultyBadge'
 import PremiumGate from '@/components/PremiumGate'
@@ -62,7 +63,7 @@ function TestPageContent() {
     if (recordedRef.current) return
     recordedRef.current = true
 
-    const correct = chapterQuestions.filter((q) => answers[q.id] === q.correctOptionId).length
+    const correct = chapterQuestions.filter((q) => isAnswerCorrect(q, answers[q.id])).length
     const attemptedTotal = chapterQuestions.filter((q) => Boolean(answers[q.id])).length
     const wrong = attemptedTotal - correct
     const scorePct = Math.round((correct / chapterQuestions.length) * 100)
@@ -135,7 +136,7 @@ function TestPageContent() {
   const answeredIndices = new Set(chapterQuestions.map((q, i) => (answers[q.id] ? i : -1)).filter((i) => i >= 0))
 
   if (submitted) {
-    const correctCount = chapterQuestions.filter((q) => answers[q.id] === q.correctOptionId).length
+    const correctCount = chapterQuestions.filter((q) => isAnswerCorrect(q, answers[q.id])).length
     const scorePct = Math.round((correctCount / chapterQuestions.length) * 100)
 
     return (
@@ -150,7 +151,7 @@ function TestPageContent() {
 
         <div className="mt-6 space-y-2 text-left">
           {chapterQuestions.map((q, i) => {
-            const isCorrect = answers[q.id] === q.correctOptionId
+            const isCorrect = isAnswerCorrect(q, answers[q.id])
             const attempted = Boolean(answers[q.id])
             return (
               <div key={q.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
@@ -224,38 +225,54 @@ function TestPageContent() {
           </div>
           <MathText as="p" text={question.text} className="text-[15px] leading-relaxed text-ink-900" />
 
-          <div className="mt-4 space-y-2">
-            {question.options.map((opt) => {
-              const isSelected = answers[question.id] === opt.id
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => setAnswers((a) => ({ ...a, [question.id]: opt.id }))}
-                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left text-sm transition ${
-                    isSelected ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'border-slate-200 hover:bg-slate-50'
-                  }`}
-                >
-                  <span
-                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border text-xs font-semibold ${
-                      isSelected ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-500'
-                    }`}
+          {question.questionType === 'numerical' ? (
+            <div className="mt-4">
+              <label className="mb-1 block text-xs font-medium text-slate-500">Enter your answer</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={answers[question.id] || ''}
+                onChange={(e) => setAnswers((a) => ({ ...a, [question.id]: e.target.value }))}
+                placeholder="e.g. 3.5"
+                className="w-full rounded-xl border border-slate-200 p-3 text-sm text-ink-900 focus:border-brand-500 focus:outline-none"
+              />
+            </div>
+          ) : (
+            <div className="mt-4 space-y-2">
+              {question.options.map((opt) => {
+                const isSelected = answers[question.id] === opt.id
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => setAnswers((a) => ({ ...a, [question.id]: opt.id }))}
+                    className={
+                      'flex w-full items-center gap-3 rounded-xl border p-3 text-left text-sm transition ' +
+                      (isSelected ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'border-slate-200 hover:bg-slate-50')
+                    }
                   >
-                    {opt.id}
-                  </span>
-                  {opt.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={opt.imageUrl}
-                      alt={`Option ${opt.id}`}
-                      className="max-h-40 w-auto max-w-full rounded-lg border border-slate-100 object-contain"
-                    />
-                  ) : (
-                    <MathText as="span" text={opt.text} className="text-ink-800" />
-                  )}
-                </button>
-              )
-            })}
-          </div>
+                    <span
+                      className={
+                        'grid h-6 w-6 shrink-0 place-items-center rounded-full border text-xs font-semibold ' +
+                        (isSelected ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 text-slate-500')
+                      }
+                    >
+                      {opt.id}
+                    </span>
+                    {opt.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={opt.imageUrl}
+                        alt={'Option ' + opt.id}
+                        className="max-h-40 w-auto max-w-full rounded-lg border border-slate-100 object-contain"
+                      />
+                    ) : (
+                      <MathText as="span" text={opt.text} className="text-ink-800" />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
 
