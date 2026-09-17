@@ -66,7 +66,7 @@ export default function QuestionsManager() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [uploadingField, setUploadingField] = useState
+  const [uploadingField, setUploadingField] = useState<
     'imageUrl' | 'solutionImageUrl' | 'optionA' | 'optionB' | 'optionC' | 'optionD' | null
   >(null)
 
