@@ -268,6 +268,7 @@ export default function QuestionsManager() {
             uploading={uploadingField === 'imageUrl'}
             onUpload={(file) => handleImageUpload(file, 'imageUrl')}
             onClear={() => setForm((f) => ({ ...f, imageUrl: '' }))}
+            onUrlChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
           />
 
           <Field label="Question Type">
@@ -340,6 +341,12 @@ export default function QuestionsManager() {
                             options: f.options.map((o, oi) => (oi === i ? { ...o, imageUrl: '' } : o)),
                           }))
                         }
+                        onUrlChange={(url) =>
+                          setForm((f) => ({
+                            ...f,
+                            options: f.options.map((o, oi) => (oi === i ? { ...o, imageUrl: url } : o)),
+                          }))
+                        }
                       />
                     </div>
                   )
@@ -377,6 +384,7 @@ export default function QuestionsManager() {
             uploading={uploadingField === 'solutionImageUrl'}
             onUpload={(file) => handleImageUpload(file, 'solutionImageUrl')}
             onClear={() => setForm((f) => ({ ...f, solutionImageUrl: '' }))}
+            onUrlChange={(url) => setForm((f) => ({ ...f, solutionImageUrl: url }))}
           />
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -464,39 +472,50 @@ function ImageField({
   uploading,
   onUpload,
   onClear,
+  onUrlChange,
 }: {
   label: string
   url?: string
   uploading: boolean
   onUpload: (file: File) => void
   onClear: () => void
+  onUrlChange: (url: string) => void
 }) {
   return (
     <Field label={label}>
-      {url ? (
-        <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt="" className="h-16 w-16 rounded-lg border border-slate-200 object-cover" />
-          <button type="button" onClick={onClear} className="flex items-center gap-1 text-xs font-medium text-difficult">
-            <XIcon size={14} /> Remove
-          </button>
-        </div>
-      ) : (
-        <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-4 text-xs font-medium text-slate-500 hover:border-brand-400 hover:text-brand-600">
-          {uploading ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
-          {uploading ? 'Uploading…' : 'Upload image'}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) onUpload(file)
-              e.target.value = ''
-            }}
-          />
-        </label>
-      )}
+      <div className="space-y-2">
+        <input
+          type="url"
+          value={url || ''}
+          onChange={(e) => onUrlChange(e.target.value)}
+          placeholder="Paste image URL (e.g. Cloudinary link)"
+          className="admin-input"
+        />
+        {url ? (
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt="" className="h-16 w-16 rounded-lg border border-slate-200 object-cover" />
+            <button type="button" onClick={onClear} className="flex items-center gap-1 text-xs font-medium text-difficult">
+              <XIcon size={14} /> Remove
+            </button>
+          </div>
+        ) : (
+          <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-4 text-xs font-medium text-slate-500 hover:border-brand-400 hover:text-brand-600">
+            {uploading ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+            {uploading ? 'Uploading…' : 'Or upload a file instead'}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) onUpload(file)
+                e.target.value = ''
+              }}
+            />
+          </label>
+        )}
+      </div>
     </Field>
   )
 }
