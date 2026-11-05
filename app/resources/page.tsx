@@ -1,8 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
-import { ArrowRight, BookOpenCheck, Clock, Download, ExternalLink, FileText, Link2, Loader2, Lock, Search, Sparkles, UploadCloud } from 'lucide-react'
+import { BookOpenCheck, Clock, Download, ExternalLink, FileText, Link2, Loader2, Lock, Search, Sparkles } from 'lucide-react'
 import MathText from '@/components/MathText'
 import ResourceUnlockModal from '@/components/ResourceUnlockModal'
 import { useResources, useUnlockedResources, type StudyResource } from '@/lib/resources'
@@ -127,10 +126,7 @@ export default function ResourcesPage() {
           </div>
         ) : (
           <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-            <UploadCloud className="mx-auto text-slate-400" size={26} />
-            <p className="mt-2 text-sm font-bold text-ink-900">Abhi koi resource upload nahi hua</p>
-            <p className="mt-1 text-xs text-slate-500">Admin panel → <strong>Resources</strong> section se PDF / notes / paid PDF add karein.</p>
-            <Link href="/admin" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-brand-700">Open admin <ArrowRight size={13} /></Link>
+            <p className="text-sm font-bold text-slate-500">No resources available</p>
           </div>
         )}
       </section>
