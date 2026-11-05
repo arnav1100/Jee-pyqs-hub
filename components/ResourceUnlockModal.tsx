@@ -121,7 +121,7 @@ export default function ResourceUnlockModal({
                 {settings.qrImageUrl ? (
                   <Image src={settings.qrImageUrl} alt="Payment QR code" width={128} height={128} className="h-32 w-32 rounded-xl border border-slate-200 bg-white object-contain p-1" unoptimized />
                 ) : (
-                  <div className="grid h-32 w-32 place-items-center rounded-xl border border-dashed border-slate-300 bg-white text-center text-[10px] font-semibold text-slate-400">QR code<br />admin panel → Settings me add karein</div>
+                  <div className="grid h-32 w-32 place-items-center rounded-xl border border-dashed border-slate-300 bg-white text-center text-[10px] font-semibold text-slate-400">Payment QR<br />coming soon</div>
                 )}
                 <div className="w-full text-left">
                   {settings.upiId ? (
@@ -130,7 +130,7 @@ export default function ResourceUnlockModal({
                       <span className="inline-flex shrink-0 items-center gap-1 text-brand-700">{copied ? <CheckCircle2 size={13} /> : <Copy size={13} />}{copied ? 'Copied' : 'Copy'}</span>
                     </button>
                   ) : (
-                    <p className="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-[11px] text-slate-500">UPI ID abhi set nahi hai — admin panel → Settings me daalein.</p>
+                    <p className="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-[11px] text-slate-500">Payment details abhi available nahi hain. Thodi der baad try karein.</p>
                   )}
                   {settings.paymentLink && (
                     <a href={settings.paymentLink} target="_blank" rel="noreferrer" className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-3 py-2 text-xs font-bold text-white hover:bg-brand-700">Open payment page <ExternalLink size={12} /></a>
