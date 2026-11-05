@@ -19,7 +19,7 @@ export interface SiteSettings {
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
-  siteName: 'JEE PYQ Hub',
+  siteName: 'JEE PYQ HUB',
   logoUrl: '',
   qrImageUrl: '',
   upiId: '',

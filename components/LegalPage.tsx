@@ -1,0 +1,6 @@
+import Link from 'next/link'
+import { ChevronLeft, GraduationCap } from 'lucide-react'
+
+export default function LegalPage({ title, intro, sections }: { title: string; intro: string; sections: Array<{ heading: string; body: string }> }) {
+  return <div className="mx-auto max-w-3xl px-4 py-9 pb-24 sm:py-12"><Link href="/" className="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-brand-700"><ChevronLeft size={16} /> Home</Link><div className="mt-5 rounded-3xl bg-gradient-to-br from-[#0f766e] to-[#39b98f] p-6 text-white sm:p-8"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10"><GraduationCap size={20} /></span><h1 className="mt-4 font-display text-3xl font-extrabold">{title}</h1><p className="mt-2 text-sm leading-6 text-blue-100">{intro}</p></div><div className="mt-5 space-y-4">{sections.map((section) => <section key={section.heading} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><h2 className="font-display text-base font-bold text-ink-900">{section.heading}</h2><p className="mt-2 text-sm leading-6 text-slate-600">{section.body}</p></section>)}</div><p className="mt-5 text-xs text-slate-400">Last updated: November 2026. This informational page is not legal advice.</p></div>
+}

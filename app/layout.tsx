@@ -9,16 +9,15 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 const lexend = Lexend({ subsets: ['latin'], variable: '--font-lexend', display: 'swap', weight: ['500', '600', '700', '800'] })
 
 export const metadata: Metadata = {
-  title: 'JEE PYQ Hub — Practice Previous Year Questions',
+  title: 'JEE PYQ HUB — Smart JEE Main Practice',
   description:
-    'Practice JEE Main & Advanced previous year questions chapter-wise across Physics, Chemistry and Mathematics. Track difficulty, bookmark questions, and take timed tests.',
+    'Practice JEE Main previous year questions chapter-wise across Physics, Chemistry and Mathematics. Filter by year and shift, track performance, and build timed tests.',
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  themeColor: '#1652f0',
+  themeColor: '#108b77',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

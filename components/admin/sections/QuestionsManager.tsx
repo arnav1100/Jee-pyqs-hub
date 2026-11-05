@@ -13,12 +13,12 @@ import {
   type AdminQuestion,
   type AdminQuestionInput,
 } from '@/lib/admin-data'
-import type { Difficulty, ExamType, QuestionType } from '@/data/mockData'
+import type { Difficulty, QuestionType } from '@/data/mockData'
+import { useExamCatalog } from '@/lib/exam-catalog'
 import AdminModal from '../AdminModal'
 import MathText from '@/components/MathText'
 
 const DIFFICULTIES: Difficulty[] = ['Easy', 'Moderate', 'Difficult']
-const EXAM_TYPES: ExamType[] = ['JEE Main', 'JEE Advanced']
 
 const EMPTY_FORM: AdminQuestionInput = {
   text: '',
@@ -37,13 +37,16 @@ const EMPTY_FORM: AdminQuestionInput = {
   solutionImageUrl: '',
   difficulty: 'Easy',
   examType: 'JEE Main',
+  examDate: '',
   year: new Date().getFullYear(),
   shift: '',
   topic: '',
+  roiTag: '',
 }
 
 export default function QuestionsManager() {
   const { subjects } = useAdminSubjects()
+  const { categories } = useExamCatalog()
   const [subjectId, setSubjectId] = useState('')
   useEffect(() => {
     if (!subjectId && subjects.length > 0) setSubjectId(subjects[0].id)
@@ -92,10 +95,12 @@ export default function QuestionsManager() {
       solution: question.solution,
       solutionImageUrl: question.solutionImageUrl || '',
       difficulty: question.difficulty,
-      examType: question.examType,
+      examType: question.examType || 'JEE Main',
+      examDate: question.examDate || '',
       year: question.year,
       shift: question.shift,
       topic: question.topic || '',
+      roiTag: question.roiTag || '',
     })
     setError(null)
     setModalOpen(true)
@@ -277,8 +282,9 @@ export default function QuestionsManager() {
               onChange={(e) => setForm((f) => ({ ...f, questionType: e.target.value as QuestionType }))}
               className="admin-input"
             >
-              <option value="mcq">Multiple Choice</option>
+              <option value="mcq">Single-correct MCQ</option>
               <option value="numerical">Numerical (type-in-answer)</option>
+              <option value="assertion-reason">Statement / Assertion–Reason (MCQ options)</option>
             </select>
           </Field>
 
@@ -396,7 +402,7 @@ export default function QuestionsManager() {
               >
                 {DIFFICULTIES.map((d) => (
                   <option key={d} value={d}>
-                    {d}
+                    {d === 'Moderate' ? 'Medium' : d === 'Difficult' ? 'Tough' : d}
                   </option>
                 ))}
               </select>
@@ -404,13 +410,11 @@ export default function QuestionsManager() {
             <Field label="Exam">
               <select
                 value={form.examType}
-                onChange={(e) => setForm((f) => ({ ...f, examType: e.target.value as ExamType }))}
+                onChange={(e) => setForm((f) => ({ ...f, examType: e.target.value }))}
                 className="admin-input"
               >
-                {EXAM_TYPES.map((e2) => (
-                  <option key={e2} value={e2}>
-                    {e2}
-                  </option>
+                {Array.from(new Set([...categories.map((category) => category.name), form.examType || 'JEE Main'])).map((name) => (
+                  <option key={name} value={name}>{name}</option>
                 ))}
               </select>
             </Field>
@@ -432,6 +436,15 @@ export default function QuestionsManager() {
             </Field>
           </div>
 
+          <Field label="Exam Date (optional)">
+            <input
+              type="date"
+              value={form.examDate || ''}
+              onChange={(e) => setForm((f) => ({ ...f, examDate: e.target.value }))}
+              className="admin-input"
+            />
+          </Field>
+
           <Field label="Topic">
             <input
               value={form.topic}
@@ -439,6 +452,14 @@ export default function QuestionsManager() {
               placeholder="e.g. Projectile Motion"
               className="admin-input"
             />
+          </Field>
+
+          <Field label="PYQ Intelligence tag">
+            <select value={form.roiTag || ''} onChange={(e) => setForm((f) => ({ ...f, roiTag: e.target.value }))} className="admin-input">
+              <option value="">No tag</option>
+              <option value="High Weightage">🔥 High Weightage</option>
+              <option value="Repeated Concept">⚡ Repeated Concept</option>
+            </select>
           </Field>
 
           {error && <p className="text-xs font-medium text-difficult">{error}</p>}

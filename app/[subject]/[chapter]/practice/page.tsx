@@ -10,6 +10,7 @@ import QuestionNavigator from '@/components/QuestionNavigator'
 import QuestionCard from '@/components/QuestionCard'
 import ProgressBar from '@/components/ProgressBar'
 import { useProgress } from '@/lib/use-progress'
+import { useStudyData } from '@/lib/study-data'
 import PremiumGate from '@/components/PremiumGate'
 
 export default function PracticePage() {
@@ -39,8 +40,10 @@ function PracticePageContent() {
   const { questions: chapterQuestions, loading: questionsLoading } = useQuestions(subject, chapter)
 
   const { progress, save, hydrated } = useProgress(params.chapter)
+  const study = useStudyData()
   const [index, setIndex] = useState(0)
   const [showSolution, setShowSolution] = useState(false)
+  const [recordedAnswers, setRecordedAnswers] = useState<Record<string, string>>({})
 
   const structureLoading = subjectsLoading || (Boolean(subject) && chaptersLoading)
   const notFoundYet = !structureLoading && (!subject || !chapter)
@@ -122,6 +125,23 @@ function PracticePageContent() {
         bookmarked: isBookmarked ? prev.bookmarked.filter((id) => id !== question.id) : [...prev.bookmarked, question.id],
       }
     })
+    study.toggleBookmark(question.id)
+  }
+
+  function toggleSolution() {
+    const answer = progress.answers[question.id]
+    if (!showSolution && answer && recordedAnswers[question.id] !== answer) {
+      study.recordAnswer({
+        ...question,
+        subjectId: subject?.id || params.subject,
+        subjectSlug: subject?.slug || params.subject,
+        subjectName: subject?.name || params.subject,
+        chapterName: chapter?.name || params.chapter,
+        source: question.source === 'firestore' ? 'firestore' : 'sample',
+      }, answer, 0)
+      setRecordedAnswers((current) => ({ ...current, [question.id]: answer }))
+    }
+    setShowSolution((current) => !current)
   }
 
   return (
@@ -172,7 +192,7 @@ function PracticePageContent() {
           </button>
 
           <button
-            onClick={() => setShowSolution((s) => !s)}
+            onClick={toggleSolution}
             className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-ink-900 py-2.5 text-sm font-semibold text-white"
           >
             <Eye size={15} /> {showSolution ? 'Hide Solution' : 'Show Solution'}

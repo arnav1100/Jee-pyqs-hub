@@ -24,10 +24,12 @@ const TEMPLATE_HEADERS = [
   'Numerical Tolerance (optional)',
   'Solution',
   'Difficulty (Easy/Moderate/Difficult)',
-  'Exam (JEE Main/JEE Advanced)',
+  'Exam Category',
   'Year',
   'Shift',
   'Topic',
+  'Exam Date (optional)',
+  'ROI Tag (optional)',
 ]
 
 function downloadTemplate() {
@@ -54,6 +56,8 @@ function downloadTemplate() {
     2024,
     'Shift 1',
     'Reactions of Alcohols',
+    '',
+    'High Weightage',
   ]
   const numericalExample = [
     'Physics',
@@ -78,6 +82,8 @@ function downloadTemplate() {
     2024,
     'Shift 1',
     'Free Fall',
+    '',
+    'Repeated Concept',
   ]
   const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, mcqExample, numericalExample])
   const wb = XLSX.utils.book_new()
@@ -105,10 +111,12 @@ function parseRows(raw: any[]): BulkQuestionRow[] {
     numericalTolerance: String(r['Numerical Tolerance (optional)'] ?? '').trim(),
     solution: String(r['Solution'] ?? '').trim(),
     difficulty: String(r['Difficulty (Easy/Moderate/Difficult)'] ?? '').trim() as any,
-    examType: String(r['Exam (JEE Main/JEE Advanced)'] ?? '').trim() as any,
+    examType: String(r['Exam Category'] ?? r['Exam'] ?? Object.entries(r).find(([key]) => key.startsWith('Exam ('))?.[1] ?? '').trim() || 'JEE Main',
     year: Number(r['Year']) || new Date().getFullYear(),
     shift: String(r['Shift'] ?? '').trim(),
     topic: String(r['Topic'] ?? '').trim(),
+    examDate: String(r['Exam Date (optional)'] ?? '').trim(),
+    roiTag: String(r['ROI Tag (optional)'] ?? '').trim(),
   }))
 }
 
@@ -169,10 +177,10 @@ export default function BulkImportManager() {
         <h3 className="font-display text-sm font-bold text-ink-900">1. Download the template</h3>
         <p className="mt-1 text-sm text-slate-500">
           Fill your questions into this spreadsheet — one row per question. The Subject and Chapter names
-          must match what's already in the app (a new Chapter will be created automatically if it doesn't exist yet).
-          Set "Question Type" to MCQ or Numerical per row — see the two example rows already in the template.
+          must match what&apos;s already in the app (a new Chapter will be created automatically if it doesn&apos;t exist yet).
+          Set &quot;Question Type&quot; to MCQ or Numerical per row — see the two example rows already in the template.
           For questions/options that are structure diagrams rather than plain text, leave the text column empty
-          and paste an image URL in the matching "Image URL" column instead. Rows whose question text already
+          and paste an image URL in the matching &quot;Image URL&quot; column instead. Rows whose question text already
           exists in that chapter are skipped automatically, so re-uploading the same file twice is safe.
         </p>
         <button

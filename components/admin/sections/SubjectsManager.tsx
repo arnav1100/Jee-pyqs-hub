@@ -5,7 +5,7 @@ import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { useAdminSubjects, addSubject, updateSubject, deleteSubject, type AdminSubject } from '@/lib/admin-data'
 import AdminModal from '../AdminModal'
 
-const EMPTY_FORM = { slug: '', name: '', colorFrom: '#1652f0', colorTo: '#2570fb' }
+const EMPTY_FORM = { slug: '', name: '', colorFrom: '#108b77', colorTo: '#39b98f' }
 
 export default function SubjectsManager() {
   const { subjects, loading } = useAdminSubjects()

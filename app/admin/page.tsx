@@ -14,6 +14,8 @@ import BulkImportManager from '@/components/admin/sections/BulkImportManager'
 import UsersManager from '@/components/admin/sections/UsersManager'
 import PaymentsManager from '@/components/admin/sections/PaymentsManager'
 import SettingsManager from '@/components/admin/sections/SettingsManager'
+import ExamCategoriesManager from '@/components/admin/sections/ExamCategoriesManager'
+import GlobalSyncManager from '@/components/admin/sections/GlobalSyncManager'
 
 export default function AdminPage() {
   const { user, loading, isAdmin, adminChecked } = useAuth()
@@ -47,7 +49,7 @@ export default function AdminPage() {
           </span>
           <h1 className="font-display text-lg font-bold text-ink-900">Access denied</h1>
           <p className="mt-1 text-sm text-slate-500">
-            This account is signed in but doesn't have admin access.
+            This account is signed in but doesn&apos;t have admin access.
           </p>
           <button
             onClick={() => logout()}
@@ -66,7 +68,9 @@ export default function AdminPage() {
       {section === 'subjects' && <SubjectsManager />}
       {section === 'chapters' && <ChaptersManager />}
       {section === 'questions' && <QuestionsManager />}
-{section === 'bulk-import' && <BulkImportManager />}
+      {section === 'bulk-import' && <BulkImportManager />}
+      {section === 'exams' && <ExamCategoriesManager />}
+      {section === 'global-sync' && <GlobalSyncManager />}
       {section === 'users' && <UsersManager />}
       {section === 'payments' && <PaymentsManager />}
       {section === 'settings' && <SettingsManager />}

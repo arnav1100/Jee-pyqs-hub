@@ -1,6 +1,7 @@
 export type Difficulty = 'Easy' | 'Moderate' | 'Difficult'
-export type ExamType = 'JEE Main' | 'JEE Advanced'
-export type QuestionType = 'mcq' | 'numerical'
+// Kept as a string so older records and future exam categories remain readable.
+export type ExamType = string
+export type QuestionType = 'mcq' | 'numerical' | 'assertion-reason'
 
 export interface Subject {
   slug: 'physics' | 'chemistry' | 'mathematics'
@@ -39,10 +40,16 @@ export interface Question {
   correctAnswer?: number
   answerTolerance?: number
   solution: string
+  solutionImageUrl?: string
   difficulty: Difficulty
   examType: ExamType
+  examDate?: string
   year: number
   shift: string
+  topic?: string
+  roiTag?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export const subjects: Subject[] = [
@@ -85,7 +92,7 @@ export const questions: Question[] = [
       { id: 'D', text: '6 m/s' },
     ],
     correctOptionId: 'A',
-    solution: 'v(t) = dx/dt = 6t² − 6t. At t = 2 s: v = 6(2)² − 6(2) = 24 − 12 = 12 m/s. [Sample placeholder — swap in verified PYQ data before publishing.]',
+    solution: 'Differentiate position to get v(t) = dx/dt = 6t² − 6t. At t = 2 s: v = 6(2)² − 6(2) = 24 − 12 = 12 m/s. This is bundled illustrative practice content, not an attributed exam question.',
     difficulty: 'Easy',
     examType: 'JEE Main',
     year: 2023,
@@ -105,7 +112,7 @@ export const questions: Question[] = [
     correctOptionId: 'B',
     solution: 'Using v² = u² + 2gh with v = 3u: 9u² = u² + 2gh ⇒ 8u² = 2gh ⇒ h = 4u²/g.',
     difficulty: 'Moderate',
-    examType: 'JEE Advanced',
+    examType: 'JEE Main',
     year: 2022,
     shift: 'Paper 1',
   },
@@ -116,15 +123,87 @@ export const questions: Question[] = [
     text: 'A particle starts from rest and moves with constant acceleration. If it covers 40 m in the 4th second, what is its acceleration?',
     options: [
       { id: 'A', text: '4.57 m/s²' },
-      { id: 'B', text: '5.71 m/s²' },
+      { id: 'B', text: '11.43 m/s²' },
       { id: 'C', text: '8.00 m/s²' },
       { id: 'D', text: '10.0 m/s²' },
     ],
     correctOptionId: 'B',
-    solution: 'Distance in nth second = u + a(2n−1)/2. With u = 0, n = 4: 40 = a(7)/2 ⇒ a = 80/7 ≈ 11.4 m/s². Verify against source before publishing — sample data only.',
+    solution: 'Distance in the nth second is s_n = u + a(2n−1)/2. With u = 0 and n = 4: 40 = 7a/2, so a = 80/7 ≈ 11.43 m/s². This is bundled illustrative practice content, not an attributed exam question.',
     difficulty: 'Difficult',
     examType: 'JEE Main',
     year: 2021,
     shift: 'Shift 2 (Feb)',
+  },
+  {
+    id: 'mole-2022-m-s1-q1',
+    chapterSlug: 'mole-concept',
+    number: 1,
+    text: 'How many moles of oxygen atoms are present in 1.8 g of water (H₂O)?',
+    options: [
+      { id: 'A', text: '0.10 mol' },
+      { id: 'B', text: '0.20 mol' },
+      { id: 'C', text: '0.05 mol' },
+      { id: 'D', text: '1.00 mol' },
+    ],
+    correctOptionId: 'A',
+    solution: 'Molar mass of water is 18 g/mol, so 1.8 g is 0.10 mol of H₂O. Each molecule has one oxygen atom, so 0.10 mol of oxygen atoms. This is bundled illustrative practice content, not an attributed exam question.',
+    difficulty: 'Easy',
+    examType: 'JEE Main',
+    year: 2022,
+    shift: 'Shift 1 (June)',
+  },
+  {
+    id: 'bond-2021-m-s1-q4',
+    chapterSlug: 'chemical-bonding',
+    number: 2,
+    text: 'Which of the following molecules has a bond angle closest to 120°?',
+    options: [
+      { id: 'A', text: 'H₂O' },
+      { id: 'B', text: 'BF₃' },
+      { id: 'C', text: 'NH₃' },
+      { id: 'D', text: 'CH₄' },
+    ],
+    correctOptionId: 'B',
+    solution: 'BF₃ is trigonal planar (sp² hybridised) with F–B–F bond angles of 120°. H₂O is ~104.5°, NH₃ ~107° and CH₄ 109.5°. This is bundled illustrative practice content, not an attributed exam question.',
+    difficulty: 'Moderate',
+    examType: 'JEE Main',
+    year: 2021,
+    shift: 'Shift 1 (Feb)',
+  },
+  {
+    id: 'quad-2023-m-s2-q2',
+    chapterSlug: 'quadratic-equations',
+    number: 3,
+    text: 'If α and β are the roots of x² − 5x + 6 = 0, what is the value of α² + β²?',
+    options: [
+      { id: 'A', text: '11' },
+      { id: 'B', text: '13' },
+      { id: 'C', text: '25' },
+      { id: 'D', text: '36' },
+    ],
+    correctOptionId: 'B',
+    solution: 'α + β = 5 and αβ = 6. Then α² + β² = (α + β)² − 2αβ = 25 − 12 = 13. This is bundled illustrative practice content, not an attributed exam question.',
+    difficulty: 'Easy',
+    examType: 'JEE Main',
+    year: 2023,
+    shift: 'Shift 2 (Jan)',
+  },
+  {
+    id: 'series-2022-m-s2-q5',
+    chapterSlug: 'sequences-series',
+    number: 4,
+    text: 'The sum of the first 20 terms of the arithmetic progression 3, 7, 11, … is',
+    options: [
+      { id: 'A', text: '820' },
+      { id: 'B', text: '840' },
+      { id: 'C', text: '800' },
+      { id: 'D', text: '760' },
+    ],
+    correctOptionId: 'A',
+    solution: 'Here a = 3 and d = 4, so a₂₀ = 3 + 19×4 = 79. Then S₂₀ = (20/2)(3 + 79) = 10 × 82 = 820. This is bundled illustrative practice content, not an attributed exam question.',
+    difficulty: 'Moderate',
+    examType: 'JEE Main',
+    year: 2022,
+    shift: 'Shift 2 (June)',
   },
 ]

@@ -35,13 +35,36 @@ export interface QuestionDoc extends Question {
 }
 
 function mockSubjectsAsDocs(): SubjectDoc[] {
-  return mockSubjects.map((s) => ({ ...s, id: s.slug, source: 'mock' }))
+  return mockSubjects.map((s) => {
+    const subjectChapters = mockChapters.filter((chapter) => chapter.subjectSlug === s.slug)
+    const chapterSlugs = new Set(subjectChapters.map((chapter) => chapter.slug))
+    const totalQuestions = mockQuestions.filter((question) => chapterSlugs.has(question.chapterSlug)).length
+    return {
+      ...s,
+      id: s.slug,
+      totalChapters: subjectChapters.length,
+      totalQuestions,
+      source: 'mock',
+    }
+  })
 }
 
 function mockChaptersAsDocs(subjectSlug: string): ChapterDoc[] {
   return mockChapters
     .filter((c) => c.subjectSlug === subjectSlug)
-    .map((c) => ({ ...c, id: c.slug, subjectId: subjectSlug, source: 'mock' }))
+    .map((chapter) => {
+      const chapterQuestions = mockQuestions.filter((question) => question.chapterSlug === chapter.slug)
+      return {
+        ...chapter,
+        id: chapter.slug,
+        subjectId: subjectSlug,
+        totalQuestions: chapterQuestions.length,
+        easy: chapterQuestions.filter((question) => question.difficulty === 'Easy').length,
+        moderate: chapterQuestions.filter((question) => question.difficulty === 'Moderate').length,
+        difficult: chapterQuestions.filter((question) => question.difficulty === 'Difficult').length,
+        source: 'mock' as const,
+      }
+    })
 }
 
 function mockQuestionsAsDocs(chapterSlug: string): QuestionDoc[] {

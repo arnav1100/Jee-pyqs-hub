@@ -41,6 +41,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Admin-managed dynamic exam definitions. Category names and marking
+    // schemes are public so the PYQ library and test builder can render them.
+    match /examCategories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Student learning data for the newer practice workspace. This remains
+    // separate from legacy progress documents so existing local keys and
+    // Firestore records are not overwritten during migration.
+    match /users/{userId}/studyData/{docId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // Question reports are private to their author and site admins.
+    match /questionReports/{reportId} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
+
     // User profile docs, created by the signed-in user themselves at
     // sign-up (see lib/auth-context.tsx: upsertUserProfile, which also
     // activates the 12h free trial) and updated by admins (plan

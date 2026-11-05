@@ -68,13 +68,13 @@ export default function ChapterDashboard() {
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Link
-          href={`/${subject.slug}/${chapter.slug}/practice`}
+          href={`/practice?subject=${encodeURIComponent(subject.slug)}&chapter=${encodeURIComponent(chapter.slug)}`}
           className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 py-3.5 font-semibold text-white shadow-sm transition hover:bg-brand-700"
         >
           <PenLine size={18} /> Start Practice
         </Link>
         <Link
-          href={`/${subject.slug}/${chapter.slug}/test`}
+          href={`/tests?exam=JEE%20Main&subject=${encodeURIComponent(subject.name)}&chapter=${encodeURIComponent(chapter.name)}`}
           className="flex items-center justify-center gap-2 rounded-xl border-2 border-brand-600 py-3.5 font-semibold text-brand-700 transition hover:bg-brand-50"
         >
           <Timer size={18} /> Take Test

@@ -19,7 +19,8 @@ import {
   writeBatch,
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
-import { db, storage } from './firebase'
+import { db, storage, isConfigured } from './firebase'
+import { collectQuestionRecords, normalizeQuestionRecord, readLegacyQuestionRawRecords } from './question-library'
 import type { Difficulty, ExamType, Option, QuestionType } from '@/data/mockData'
 
 const MONTHLY_PLAN_DAYS = 30
@@ -59,9 +60,11 @@ export interface AdminQuestionInput {
   solutionImageUrl?: string
   difficulty: Difficulty
   examType: ExamType
+  examDate?: string
   year: number
   shift: string
   topic: string
+  roiTag?: string
 }
 
 export interface AdminQuestion extends AdminQuestionInput {
@@ -311,14 +314,14 @@ export async function updateQuestion(
 
   if (previousDifficulty !== data.difficulty) {
     await runTransaction(db, async (tx) => {
-      tx.update(questionRef, { ...data })
+      tx.update(questionRef, { ...data, updatedAt: serverTimestamp() })
       tx.update(chapterRef, {
         [difficultyKey[previousDifficulty]]: increment(-1),
         [difficultyKey[data.difficulty]]: increment(1),
       })
     })
   } else {
-    await updateDoc(questionRef, { ...data })
+    await updateDoc(questionRef, { ...data, updatedAt: serverTimestamp() })
   }
 }
 
@@ -554,9 +557,11 @@ export interface BulkQuestionRow {
   solution: string
   difficulty: Difficulty
   examType: ExamType
+  examDate?: string
   year: number
   shift: string
   topic: string
+  roiTag?: string
 }
 
 
@@ -589,7 +594,11 @@ export async function bulkImportQuestions(
   rows.forEach((r, i) => {
     const rowIndex = i + 2
     const typeRaw = (r.questionType || 'mcq').trim().toLowerCase()
-    const resolvedType: QuestionType = typeRaw === 'numerical' ? 'numerical' : 'mcq'
+    const resolvedType: QuestionType = typeRaw.includes('numerical') || typeRaw.includes('integer')
+      ? 'numerical'
+      : typeRaw.includes('assertion') || typeRaw.includes('statement')
+        ? 'assertion-reason'
+        : 'mcq'
 
     if (!r.subjectName?.trim() || !r.chapterName?.trim() || !r.text?.trim() || !r.solution?.trim()) {
       errors.push({ row: rowIndex, message: 'Missing a required field (subject/chapter/question/solution)' })
@@ -599,10 +608,8 @@ export async function bulkImportQuestions(
       errors.push({ row: rowIndex, message: 'Difficulty must be Easy, Moderate or Difficult (got "' + r.difficulty + '")' })
       return
     }
-    if (!['JEE Main', 'JEE Advanced'].includes(r.examType)) {
-      errors.push({ row: rowIndex, message: 'Exam must be "JEE Main" or "JEE Advanced" (got "' + r.examType + '")' })
-      return
-    }
+    // Older imports without an exam value stay backward-compatible with the primary category.
+    if (!r.examType?.trim()) r.examType = 'JEE Main'
 
     if (resolvedType === 'numerical') {
       const num = Number(r.numericalAnswer)
@@ -678,20 +685,23 @@ export async function bulkImportQuestions(
     const existingQuestionsSnap = await getDocs(
       collection(db, 'subjects', subject.id, 'chapters', chapterId, 'questions')
     )
-    const seenTexts = new Set<string>()
+    const questionSignature = (text: string, examType: string, year: number, shift: string) =>
+      [normalizeQuestionText(text), examType.trim().toLowerCase(), year, shift.trim().toLowerCase()].join('|||')
+    const seenQuestions = new Set<string>()
     existingQuestionsSnap.docs.forEach((d) => {
-      const t = (d.data().text as string) || ''
-      if (t) seenTexts.add(normalizeQuestionText(t))
+      const data = d.data()
+      const text = (data.text as string) || ''
+      if (text) seenQuestions.add(questionSignature(text, String(data.examType || 'JEE Main'), Number(data.year) || 0, String(data.shift || '')))
     })
 
     const rowsToWrite: typeof groupRows = []
     for (const row of groupRows) {
-      const normalized = normalizeQuestionText(row.text)
-      if (seenTexts.has(normalized)) {
+      const signature = questionSignature(row.text, row.examType || 'JEE Main', row.year, row.shift || '')
+      if (seenQuestions.has(signature)) {
         duplicates += 1
         continue
       }
-      seenTexts.add(normalized)
+      seenQuestions.add(signature)
       rowsToWrite.push(row)
     }
 
@@ -729,13 +739,16 @@ export async function bulkImportQuestions(
             : { correctOptionId: row.correct }),
           solution: row.solution,
           difficulty: row.difficulty,
-          examType: row.examType,
+          examType: row.examType || 'JEE Main',
+          ...(row.examDate?.trim() ? { examDate: row.examDate.trim() } : {}),
           year: row.year,
           shift: row.shift || '',
           topic: row.topic || '',
+          ...(row.roiTag?.trim() ? { roiTag: row.roiTag.trim() } : {}),
           chapterSlug,
           number: currentTotal + i + idx + 1,
           createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
         })
         if (row.difficulty === 'Easy') newEasy++
         else if (row.difficulty === 'Moderate') newModerate++
@@ -758,4 +771,154 @@ export async function bulkImportQuestions(
   }
 
   return { imported, duplicates, errors }
+}
+/* ------------------------- Global question sync ---------------------------- */
+
+function makeJsonSafe(value: unknown): unknown {
+  if (value instanceof Date) return value.toISOString()
+  if (value && typeof value === 'object' && 'toDate' in value && typeof (value as { toDate?: unknown }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate().toISOString()
+  }
+  if (Array.isArray(value)) return value.map(makeJsonSafe)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, makeJsonSafe(entry)]))
+  }
+  return value
+}
+
+/**
+ * Creates a non-destructive, merge-only export for /public/questions.json.
+ * Live Firestore records win over static/local copies with the same id;
+ * no database records are edited or deleted by this operation.
+ */
+export async function exportQuestionDatabase() {
+  const exportedAt = new Date().toISOString()
+  let subjects: Record<string, unknown>[] = []
+  const firestoreRows: Record<string, unknown>[] = []
+
+  if (isConfigured) {
+    const subjectSnapshot = await getDocs(collection(db, 'subjects'))
+    const subjectDocs = subjectSnapshot.docs
+    subjects = subjectDocs.map((subjectDoc) => ({ id: subjectDoc.id, ...makeJsonSafe(subjectDoc.data()) as Record<string, unknown> }))
+
+    const chapterGroups = await Promise.all(subjectDocs.map(async (subjectDoc) => {
+      const chapterSnapshot = await getDocs(collection(db, 'subjects', subjectDoc.id, 'chapters'))
+      return { subjectDoc, chapters: chapterSnapshot.docs }
+    }))
+    const questionGroups = await Promise.all(chapterGroups.flatMap(({ subjectDoc, chapters }) => chapters.map(async (chapterDoc) => {
+      const snapshot = await getDocs(collection(db, 'subjects', subjectDoc.id, 'chapters', chapterDoc.id, 'questions'))
+      const subjectData = subjectDoc.data()
+      const chapterData = chapterDoc.data()
+      return snapshot.docs.map((questionDoc) => ({
+        ...makeJsonSafe(questionDoc.data()) as Record<string, unknown>,
+        id: questionDoc.id,
+        subjectId: subjectDoc.id,
+        subjectSlug: String(subjectData.slug || subjectDoc.id),
+        subjectName: String(subjectData.name || subjectDoc.id),
+        chapterId: chapterDoc.id,
+        chapterSlug: String(chapterData.slug || chapterDoc.id),
+        chapterName: String(chapterData.name || chapterDoc.id),
+        examType: String(questionDoc.data().examType || 'JEE Main'),
+      }))
+    })))
+    questionGroups.forEach((rows) => firestoreRows.push(...rows))
+  }
+
+  let staticRows: Record<string, unknown>[] = []
+  let staticSubjects: Record<string, unknown>[] = []
+  try {
+    const response = await fetch('/questions.json', { cache: 'no-store' })
+    if (response.ok) {
+      const payload = await response.json()
+      staticRows = collectQuestionRecords(payload)
+      if (Array.isArray(payload?.subjects)) staticSubjects = payload.subjects
+    }
+  } catch {
+    // A missing static bundle is a valid first-run state.
+  }
+  const localRows = readLegacyQuestionRawRecords()
+
+  const mergedQuestions = new Map<string, { priority: number; row: Record<string, unknown> }>()
+  const addRows = (rows: Record<string, unknown>[], priority: number, source: 'static' | 'local' | 'firestore') => {
+    rows.forEach((raw, index) => {
+      const normalized = normalizeQuestionRecord(raw, source, index + 1)
+      if (!normalized) return
+      const currentPriority = mergedQuestions.get(normalized.id)?.priority ?? -1
+      if (currentPriority >= priority) return
+      const { source: _source, ...normalizedFields } = normalized
+      // Keep every unknown legacy field, while filling in identifiers and
+      // the common metadata required by the new library.
+      mergedQuestions.set(normalized.id, {
+        priority,
+        row: {
+          ...normalizedFields,
+          ...raw,
+          id: normalized.id,
+          subjectId: raw.subjectId || normalized.subjectId,
+          subjectSlug: raw.subjectSlug || normalized.subjectSlug,
+          subjectName: raw.subjectName || normalized.subjectName,
+          chapterSlug: raw.chapterSlug || normalized.chapterSlug,
+          chapterName: raw.chapterName || normalized.chapterName,
+          examType: raw.examType || normalized.examType || 'JEE Main',
+        },
+      })
+    })
+  }
+  addRows(staticRows, 1, 'static')
+  addRows(localRows, 2, 'local')
+  addRows(firestoreRows, 3, 'firestore')
+
+  const mergedSubjects = new Map<string, Record<string, unknown>>()
+  ;[...staticSubjects, ...subjects].forEach((subject, index) => {
+    const id = String(subject.id || subject.slug || subject.name || `subject-${index}`)
+    mergedSubjects.set(id, { ...mergedSubjects.get(id), ...subject })
+  })
+
+  return {
+    schemaVersion: 1,
+    exportedAt,
+    subjects: Array.from(mergedSubjects.values()),
+    questions: Array.from(mergedQuestions.values()).map((item) => item.row),
+  }
+}
+
+/** Import a JSON question export as additive records; duplicates are skipped. */
+export async function importQuestionDatabase(
+  payload: unknown,
+  subjects: AdminSubject[],
+  onProgress?: (done: number, total: number) => void
+) {
+  const rows = collectQuestionRecords(payload).map((raw, index) => {
+    const question = normalizeQuestionRecord(raw, 'local', index + 1)
+    if (!question) return null
+    const options = question.options || []
+    return {
+      subjectName: question.subjectName,
+      chapterName: question.chapterName,
+      text: question.text,
+      questionType: question.questionType || 'mcq',
+      optionA: options.find((option) => option.id === 'A')?.text || '',
+      optionB: options.find((option) => option.id === 'B')?.text || '',
+      optionC: options.find((option) => option.id === 'C')?.text || '',
+      optionD: options.find((option) => option.id === 'D')?.text || '',
+      optionAImageUrl: options.find((option) => option.id === 'A')?.imageUrl || '',
+      optionBImageUrl: options.find((option) => option.id === 'B')?.imageUrl || '',
+      optionCImageUrl: options.find((option) => option.id === 'C')?.imageUrl || '',
+      optionDImageUrl: options.find((option) => option.id === 'D')?.imageUrl || '',
+      questionImageUrl: question.imageUrl || '',
+      correct: question.correctOptionId || 'A',
+      numericalAnswer: question.correctAnswer === undefined ? '' : String(question.correctAnswer),
+      numericalTolerance: question.answerTolerance === undefined ? '' : String(question.answerTolerance),
+      solution: question.solution,
+      difficulty: question.difficulty,
+      examType: question.examType || 'JEE Main',
+      examDate: question.examDate || '',
+      year: question.year,
+      shift: question.shift,
+      topic: question.topic || '',
+      roiTag: question.roiTag || '',
+    } as BulkQuestionRow
+  }).filter((row): row is BulkQuestionRow => Boolean(row))
+
+  return bulkImportQuestions(rows, subjects, onProgress)
 }

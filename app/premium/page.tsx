@@ -83,7 +83,7 @@ export default function PremiumPage() {
         <ol className="mt-2 space-y-1 text-sm text-slate-600">
           <li>1. Scan the QR code or pay via UPI ID below.</li>
           <li>2. Note your Transaction ID / UTR number.</li>
-          <li>3. Tap a plan above, then submit the "I Have Paid" form with a screenshot.</li>
+          <li>3. Tap a plan above, then submit the &quot;I Have Paid&quot; form with a screenshot.</li>
           <li>4. Admin verifies your payment and your plan activates automatically.</li>
         </ol>
 
@@ -114,7 +114,7 @@ export default function PremiumPage() {
               </a>
             )}
             {!settings.qrImageUrl && !settings.upiId && !settings.paymentLink && (
-              <p className="text-slate-400">Payment details haven't been added by the admin yet.</p>
+              <p className="text-slate-400">Payment details haven&apos;t been added by the admin yet.</p>
             )}
           </div>
         </div>

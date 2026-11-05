@@ -12,6 +12,7 @@ import PremiumGate from '@/components/PremiumGate'
 import MathText from '@/components/MathText'
 import { useAuth } from '@/lib/auth-context'
 import { recordAttempt } from '@/lib/stats'
+import { useStudyData } from '@/lib/study-data'
 
 const SECONDS_PER_QUESTION = 90
 
@@ -48,6 +49,7 @@ function TestPageContent() {
   const { questions: chapterQuestions, loading: questionsLoading } = useQuestions(subject, chapter)
 
   const { user } = useAuth()
+  const study = useStudyData()
   const [index, setIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
@@ -68,6 +70,19 @@ function TestPageContent() {
     const wrong = attemptedTotal - correct
     const scorePct = Math.round((correct / chapterQuestions.length) * 100)
 
+    chapterQuestions.forEach((question) => {
+      const answer = answers[question.id]
+      if (!answer) return
+      study.recordAnswer({
+        ...question,
+        subjectId: subject.id,
+        subjectSlug: subject.slug,
+        subjectName: subject.name,
+        chapterName: chapter.name,
+        source: question.source === 'firestore' ? 'firestore' : 'sample',
+      }, answer, 0)
+    })
+
     recordAttempt(user.uid, {
       subjectSlug: subject.slug,
       chapterSlug: chapter.slug,
@@ -77,7 +92,7 @@ function TestPageContent() {
       wrong,
       scorePct,
     }).catch(() => {})
-  }, [submitted, user, subject, chapter, chapterQuestions, answers])
+  }, [submitted, user, subject, chapter, chapterQuestions, answers, study])
 
   // Initialize the countdown once questions have loaded.
   useEffect(() => {
@@ -86,8 +101,10 @@ function TestPageContent() {
     }
   }, [questionsLoading, chapterQuestions.length, secondsLeft])
 
+  const timerRunning = !submitted && secondsLeft !== null
+
   useEffect(() => {
-    if (submitted || secondsLeft === null) return
+    if (!timerRunning) return
     const t = setInterval(() => {
       setSecondsLeft((s) => {
         if (s === null) return s
@@ -99,7 +116,7 @@ function TestPageContent() {
       })
     }, 1000)
     return () => clearInterval(t)
-  }, [submitted, secondsLeft === null])
+  }, [timerRunning])
 
   const structureLoading = subjectsLoading || (Boolean(subject) && chaptersLoading)
   const notFoundYet = !structureLoading && (!subject || !chapter)

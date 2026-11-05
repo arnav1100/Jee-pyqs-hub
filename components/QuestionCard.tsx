@@ -41,6 +41,7 @@ export default function QuestionCard({
       </div>
 
       <MathText as="p" text={question.text} className="text-[15px] leading-relaxed text-ink-900" />
+      {(question.topic || question.roiTag) && <div className="mt-2 flex flex-wrap gap-2">{question.topic && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">Topic: {question.topic}</span>}{question.roiTag && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">⚡ {question.roiTag}</span>}</div>}
 
       {question.imageUrl && (
         <div className="relative mt-3 aspect-video w-full overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
@@ -139,6 +140,7 @@ export default function QuestionCard({
         <div className="mt-4 rounded-xl bg-brand-50/60 p-3.5 text-sm text-ink-800 ring-1 ring-brand-100">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-700">Solution</p>
           <MathText text={question.solution} />
+          {question.solutionImageUrl && <img src={question.solutionImageUrl} alt={`Solution for question ${question.number}`} className="mt-3 max-h-80 max-w-full rounded-lg border border-slate-100 object-contain" />}
         </div>
       )}
 

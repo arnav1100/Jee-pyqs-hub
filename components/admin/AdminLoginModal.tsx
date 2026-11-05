@@ -103,7 +103,7 @@ export default function AdminLoginModal({ open, onClose, redirectOnSuccess = tru
         </form>
 
         <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-400">
-          Admin access is granted separately via a Firebase custom claim — signing up here won't grant it.
+          Admin access is granted separately via a Firebase custom claim — signing up here won&apos;t grant it.
         </p>
       </div>
     </div>

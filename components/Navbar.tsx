@@ -2,125 +2,84 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Crown, GraduationCap, LogOut, User as UserIcon } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Activity, BookOpen, CheckCircle2, GraduationCap, NotebookPen, Sparkles, Timer, User as UserIcon, LogOut } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { logout } from '@/lib/firebase'
 import { useSettings } from '@/lib/settings'
 import AuthModal from './AuthModal'
 import AdminLoginModal from './admin/AdminLoginModal'
+import AdminPasscodeModal from './admin/AdminPasscodeModal'
+import ThemeToggle from './ThemeToggle'
 
-const TAP_COUNT_REQUIRED = 5
-const TAP_WINDOW_MS = 3000
-const NAV_DEBOUNCE_MS = 320
+const NAV_ITEMS = [
+  { href: '/pyqs', label: 'PYQ', icon: BookOpen },
+  { href: '/tests', label: 'Tests', icon: CheckCircle2 },
+  { href: '/mock-tests', label: 'Mock', icon: Timer },
+  { href: '/smart-test', label: 'Smart test', icon: Sparkles },
+  { href: '/mistakes', label: 'Mistake book', icon: NotebookPen },
+  { href: '/performance', label: 'Performance', icon: Activity },
+]
 
 export default function Navbar() {
-  const { user, loading, access } = useAuth()
+  const { user, loading, isAdmin } = useAuth()
   const { settings } = useSettings()
+  const pathname = usePathname() || '/'
   const router = useRouter()
   const [authOpen, setAuthOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
+  const [adminGateOpen, setAdminGateOpen] = useState(false)
+  const [showAdminButton, setShowAdminButton] = useState(false)
+  const logoTapCount = useRef(0)
+  const tapResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const tapTimestamps = useRef<number[]>([])
-  const navTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => {
+    if (tapResetTimer.current) clearTimeout(tapResetTimer.current)
+  }, [])
 
-  function handleLogoClick(e: React.MouseEvent) {
-    e.preventDefault()
-    const now = Date.now()
-    tapTimestamps.current = [...tapTimestamps.current, now].filter((t) => now - t <= TAP_WINDOW_MS)
-
-    if (tapTimestamps.current.length >= TAP_COUNT_REQUIRED) {
-      tapTimestamps.current = []
-      if (navTimer.current) clearTimeout(navTimer.current)
-      setAdminOpen(true)
+  function handleLogoTap() {
+    logoTapCount.current += 1
+    if (tapResetTimer.current) clearTimeout(tapResetTimer.current)
+    if (logoTapCount.current >= 5) {
+      setShowAdminButton(true)
+      logoTapCount.current = 0
+      tapResetTimer.current = null
       return
     }
+    tapResetTimer.current = setTimeout(() => { logoTapCount.current = 0 }, 3000)
+  }
 
-    // Not (yet) a secret gesture — behave like a normal link, just slightly
-    // debounced so we can keep counting taps without a full navigation
-    // resetting the counter after the first click.
-    if (navTimer.current) clearTimeout(navTimer.current)
-    navTimer.current = setTimeout(() => {
-      tapTimestamps.current = []
-      router.push('/')
-    }, NAV_DEBOUNCE_MS)
+  function unlockAdmin() {
+    setAdminGateOpen(false)
+    if (isAdmin) router.push('/admin')
+    else setAdminOpen(true)
   }
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <button
-            onClick={handleLogoClick}
-            className="flex items-center gap-2 font-display font-bold text-ink-900"
-            aria-label="Home"
-          >
-            <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-lg bg-brand-600 text-white">
-              {settings.logoUrl ? (
-                <Image src={settings.logoUrl} alt="" width={32} height={32} className="h-full w-full object-cover" />
-              ) : (
-                <GraduationCap size={18} />
-              )}
+      <header className="sticky top-0 z-40 border-b border-emerald-100 bg-white/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-3 sm:px-5">
+          <Link href="/" onClick={handleLogoTap} className="flex shrink-0 items-center gap-2 font-display font-extrabold text-ink-900" aria-label="JEE PYQ Hub home">
+            <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-2xl bg-brand-600 text-white shadow-sm">
+              {settings.logoUrl ? <Image src={settings.logoUrl} alt="" width={36} height={36} className="h-full w-full object-cover" /> : <GraduationCap size={20} />}
             </span>
-            <span className="text-[15px] tracking-tight">{settings.siteName}</span>
-          </button>
+            <span className="text-[13px] tracking-tight sm:text-sm">{settings.siteName || 'JEE PYQ HUB'}</span>
+          </Link>
 
-          {!loading && (
-            <div className="flex items-center gap-2">
-              {user && (
-                <Link
-                  href="/dashboard"
-                  className="hidden items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-slate-50 sm:flex"
-                >
-                  My Progress
-                </Link>
-              )}
-              {user && !access.isPremium && (
-                <Link
-                  href="/premium"
-                  className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    access.isTrialActive
-                      ? 'border border-brand-200 text-brand-700 hover:bg-brand-50'
-                      : 'bg-amber-100 text-moderate hover:bg-amber-200'
-                  }`}
-                >
-                  <Crown size={13} />
-                  {access.isTrialActive ? 'Trial' : 'Upgrade'}
-                </Link>
-              )}
-              {user && access.isPremium && (
-                <Link
-                  href="/premium"
-                  className="flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700"
-                >
-                  <Crown size={13} /> Premium
-                </Link>
-              )}
-              {user ? (
-                <button
-                  onClick={() => logout()}
-                  className="flex items-center gap-1.5 rounded-full border border-slate-200 py-1.5 pl-1.5 pr-3 text-sm font-medium text-ink-700 hover:bg-slate-50"
-                >
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-brand-100 text-brand-700">
-                    <UserIcon size={14} />
-                  </span>
-                  <span className="hidden sm:inline">{user.displayName || user.email?.split('@')[0]}</span>
-                  <LogOut size={14} className="text-slate-400" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => setAuthOpen(true)}
-                  className="rounded-full bg-brand-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 active:bg-brand-800"
-                >
-                  Sign in
-                </button>
-              )}
-            </div>
-          )}
+          <nav className="ml-2 hidden items-center gap-0.5 md:flex" aria-label="Main navigation">
+            {NAV_ITEMS.map(({ href, label }) => <Link key={href} href={href} aria-current={pathname === href || pathname.startsWith(`${href}/`) ? 'page' : undefined} className={`rounded-full px-2.5 py-2 text-[11px] font-bold transition lg:px-3 lg:text-xs ${pathname === href || pathname.startsWith(`${href}/`) ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-800'}`}>{label}</Link>)}
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <ThemeToggle />
+            {showAdminButton && <button onClick={() => setAdminGateOpen(true)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-brand-200 hover:text-brand-700">Admin</button>}
+            {!loading && (user ? <><Link href="/dashboard" className="grid h-9 w-9 place-items-center rounded-full bg-brand-50 text-brand-800" aria-label="My progress"><UserIcon size={17} /></Link><button onClick={() => logout()} className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="Sign out"><LogOut size={15} /></button></> : <button onClick={() => setAuthOpen(true)} className="rounded-full bg-brand-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-700 sm:px-4 sm:text-sm">Log in</button>)}
+          </div>
         </div>
       </header>
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <AdminPasscodeModal open={adminGateOpen} onClose={() => setAdminGateOpen(false)} onUnlock={unlockAdmin} />
       <AdminLoginModal open={adminOpen} onClose={() => setAdminOpen(false)} />
     </>
   )

@@ -92,7 +92,7 @@ export default function PaymentFormModal({ open, onClose, plan, amount }: Paymen
             <CheckCircle2 className="mx-auto mb-3 text-easy" size={40} />
             <p className="text-sm text-ink-800">
               Thanks! Your {plan === 'monthly' ? 'Monthly' : 'Lifetime'} plan request is pending admin review.
-              You'll get full access as soon as it's approved.
+              You&apos;ll get full access as soon as it&apos;s approved.
             </p>
             <button
               onClick={handleClose}
@@ -104,7 +104,7 @@ export default function PaymentFormModal({ open, onClose, plan, amount }: Paymen
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <p className="text-xs text-slate-500">
-              {plan === 'monthly' ? 'Monthly Plan' : 'Lifetime Plan'} · ₹{amount} — fill this in after you've paid via the QR/UPI details.
+              {plan === 'monthly' ? 'Monthly Plan' : 'Lifetime Plan'} · ₹{amount} — fill this in after you&apos;ve paid via the QR/UPI details.
             </p>
             <Field label="Name">
               <input value={name} onChange={(e) => setName(e.target.value)} className="admin-input" />

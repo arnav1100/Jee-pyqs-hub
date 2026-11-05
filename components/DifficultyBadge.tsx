@@ -8,6 +8,7 @@ const styles: Record<Difficulty, string> = {
 }
 
 export default function DifficultyBadge({ difficulty }: { difficulty: Difficulty }) {
+  const label = difficulty === 'Moderate' ? 'Medium' : difficulty === 'Difficult' ? 'Tough' : difficulty
   return (
     <span
       className={clsx(
@@ -15,7 +16,7 @@ export default function DifficultyBadge({ difficulty }: { difficulty: Difficulty
         styles[difficulty]
       )}
     >
-      {difficulty}
+      {label}
     </span>
   )
 }

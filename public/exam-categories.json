@@ -1,0 +1,8 @@
+[
+  {
+    "slug": "jee-main",
+    "name": "JEE Main",
+    "subjects": ["Physics", "Chemistry", "Mathematics"],
+    "markingScheme": { "correct": 4, "incorrect": -1, "unattempted": 0 }
+  }
+]

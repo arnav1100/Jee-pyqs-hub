@@ -130,7 +130,7 @@ export default function SettingsManager() {
             <input
               value={form.announcement.text}
               onChange={(e) => setForm((f) => ({ ...f, announcement: { ...f.announcement, text: e.target.value } }))}
-              placeholder="🔥 New JEE Advanced 2026 PYQs added!"
+              placeholder="🔥 New JEE Main PYQs added!"
               className="admin-input"
             />
           </Field>
