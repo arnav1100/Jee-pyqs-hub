@@ -27,8 +27,88 @@ export function sameSubject(left: string, right: string): boolean {
   return Boolean(subjectKey(left)) && subjectKey(left) === subjectKey(right)
 }
 
+/**
+ * Chapter names arrive from different imports, so the same chapter can appear
+ * twice: "Complex Number" / "Complex Numbers", "Permutation Combination" /
+ * "Permutation and Combination", "Chemical Bonding" / "Chemical Bonding and
+ * Molecular Structure". chapterKey() folds those into one key so lists, tests
+ * and bookmarks all treat them as a single chapter.
+ */
+const CHAPTER_ALIASES: Record<string, string> = {
+  // Physics
+  dualnatureofmatterradiation: 'dualnatureofmatter',
+  unitsdimensions: 'unitsmeasurements',
+  // Chemistry
+  chemicalbondingmolecularstructure: 'chemicalbonding',
+  pblockelementsgroup1314: 'pblockelements',
+  thermodynamicsc: 'thermodynamic',
+}
+
+/** Nicer, syllabus-style names for merged chapters (keyed by chapterKey). */
+const CHAPTER_DISPLAY: Record<string, string> = {
+  unitmeasurement: 'Units and Measurements',
+  unitsmeasurement: 'Units and Measurements',
+  unitsmeasurements: 'Units and Measurements',
+  dualnatureofmatter: 'Dual Nature of Matter and Radiation',
+  chemicalbonding: 'Chemical Bonding and Molecular Structure',
+  pblockelements: 'p-Block Elements',
+  complexnumber: 'Complex Numbers',
+  permutationcombination: 'Permutation and Combination',
+  quadraticequation: 'Quadratic Equations',
+  thermodynamic: 'Thermodynamics',
+}
+
+function baseChapterKey(name: string): string {
+  return (name || '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[()\[\]]/g, ' ')
+    .replace(/\band\b/g, ' ')
+    .replace(/\bthe\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, '')
+}
+
 export function chapterKey(name: string): string {
-  return (name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
+  const base = baseChapterKey(name)
+  if (!base) return ''
+  const aliased = CHAPTER_ALIASES[base] || base
+  // Treat a trailing plural as the same chapter: "Equations" ~ "Equation".
+  return aliased.endsWith('s') && aliased.length > 3 ? aliased.slice(0, -1) : aliased
+}
+
+export function chapterSlugFor(name: string): string {
+  return (name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') || 'chapter'
+}
+
+/**
+ * Rewrites every row's chapterName to one display name per merged chapter
+ * (the most frequently used variant), so duplicated chapters stop appearing
+ * twice and their questions live under a single heading.
+ */
+export function canonicalizeQuestionChapters<T extends { subjectName: string; chapterName: string }>(rows: T[]): T[] {
+  const counts = new Map<string, Map<string, number>>()
+  rows.forEach((row) => {
+    const key = `${subjectKey(row.subjectName)}|${chapterKey(row.chapterName)}`
+    if (!counts.has(key)) counts.set(key, new Map())
+    const variants = counts.get(key)!
+    variants.set(row.chapterName, (variants.get(row.chapterName) || 0) + 1)
+  })
+
+  const display = new Map<string, string>()
+  counts.forEach((variants, key) => {
+    const best = [...variants.entries()].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)[0]
+    if (best) display.set(key, best[0].trim())
+  })
+
+  return rows.map((row) => {
+    const key = `${subjectKey(row.subjectName)}|${chapterKey(row.chapterName)}`
+    const name = CHAPTER_DISPLAY[chapterKey(row.chapterName)] || display.get(key) || row.chapterName
+    return name === row.chapterName ? row : { ...row, chapterName: name }
+  })
 }
 
 /** Unique chapter names (case/symbol tolerant) for a set of questions. */
