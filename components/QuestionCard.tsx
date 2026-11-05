@@ -6,10 +6,11 @@ import { Bookmark, CheckCircle2, XCircle } from 'lucide-react'
 import type { Question } from '@/data/mockData'
 import DifficultyBadge from './DifficultyBadge'
 import MathText from './MathText'
+import SolutionText from './SolutionText'
 import { isAnswerCorrect } from '@/lib/answers'
 
 interface QuestionCardProps {
-  question: Question
+  question: Question & { chapterName?: string }
   selectedOptionId?: string
   showSolution: boolean
   isBookmarked: boolean
@@ -137,9 +138,8 @@ export default function QuestionCard({
       )}
 
       {showSolution && (
-        <div className="mt-4 rounded-xl bg-brand-50/60 p-3.5 text-sm text-ink-800 ring-1 ring-brand-100">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-700">Solution</p>
-          <MathText text={question.solution} />
+        <div className="mt-4 rounded-2xl bg-brand-50/50 p-3.5 ring-1 ring-brand-100">
+          <SolutionText text={question.solution} />
           {question.solutionImageUrl && <img src={question.solutionImageUrl} alt={`Solution for question ${question.number}`} className="mt-3 max-h-80 max-w-full rounded-lg border border-slate-100 object-contain" />}
         </div>
       )}
@@ -152,7 +152,7 @@ export default function QuestionCard({
         )}
       >
         <Bookmark size={14} fill={isBookmarked ? 'currentColor' : 'none'} />
-        {isBookmarked ? 'Bookmarked' : 'Bookmark this question'}
+        {isBookmarked ? (question.chapterName ? `Bookmarked · ${question.chapterName}` : 'Bookmarked') : 'Bookmark this question'}
       </button>
     </div>
   )

@@ -19,6 +19,7 @@ import {
   type QueryDocumentSnapshot,
 } from 'firebase/firestore'
 import { db, isConfigured } from './firebase'
+import { canonicalizeQuestionChapters, chapterSlugFor } from './subject-utils'
 import {
   chapters as sampleChapters,
   questions as sampleQuestions,
@@ -260,7 +261,9 @@ export function readLegacyQuestionRecords(): QuestionLibraryItem[] {
 
 async function readStaticBundle(): Promise<QuestionBundle> {
   try {
-    const response = await fetch('/questions.json', { cache: 'no-store' })
+    // Large bundles (several MB) are revalidated instead of re-downloaded on
+    // every visit; the browser still picks up a newly published file.
+    const response = await fetch('/questions.json')
     if (!response.ok) throw new Error('questions.json is not available')
     const value = await response.json()
     if (Array.isArray(value)) {
@@ -381,7 +384,18 @@ export async function loadQuestionLibrary(): Promise<QuestionLibraryItem[]> {
   const firestoreQuestions = await fetchFirestoreQuestions(bundle.exportedAt)
 
   if (staticQuestions.length === 0 && localQuestions.length === 0 && firestoreQuestions.length === 0) return mapSamples()
-  return mergeQuestions(staticQuestions, localQuestions, firestoreQuestions)
+
+  // Fold duplicated chapter names (same chapter imported under two names)
+  // into a single chapter so one chapter shows one entry with every question.
+  return canonicalizeQuestionChapters(mergeQuestions(staticQuestions, localQuestions, firestoreQuestions))
+    .map((question) => {
+      const slug = chapterSlugFor(question.chapterName)
+      return question.chapterSlug === slug ? question : { ...question, chapterSlug: slug }
+    })
+    .sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year
+      return a.subjectName.localeCompare(b.subjectName) || a.chapterName.localeCompare(b.chapterName) || a.number - b.number
+    })
 }
 
 export function QuestionLibraryProvider({ children }: { children: React.ReactNode }) {
