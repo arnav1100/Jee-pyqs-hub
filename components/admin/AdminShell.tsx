@@ -16,6 +16,7 @@ import {
   UploadCloud,
   Globe2,
   Shapes,
+  FolderOpen,
 } from 'lucide-react'
 import { useState } from 'react'
 import { logout } from '@/lib/firebase'
@@ -29,6 +30,7 @@ export type AdminSection =
   | 'bulk-import'
   | 'exams'
   | 'global-sync'
+  | 'resources'
   | 'users'
   | 'payments'
   | 'settings'
@@ -41,6 +43,7 @@ const NAV_ITEMS: { key: AdminSection; label: string; icon: typeof LayoutDashboar
   { key: 'bulk-import', label: 'Bulk Import', icon: UploadCloud },
   { key: 'exams', label: 'Exam Categories', icon: Shapes },
   { key: 'global-sync', label: 'Global Sync', icon: Globe2 },
+  { key: 'resources', label: 'Resources', icon: FolderOpen },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'payments', label: 'Payments', icon: Wallet },
   { key: 'settings', label: 'Settings', icon: SettingsIcon },

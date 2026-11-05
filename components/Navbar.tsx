@@ -4,14 +4,13 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Activity, BookOpen, CheckCircle2, GraduationCap, NotebookPen, Sparkles, Timer, User as UserIcon, LogOut } from 'lucide-react'
+import { Activity, BookOpen, CheckCircle2, FolderOpen, GraduationCap, NotebookPen, Sparkles, Timer, User as UserIcon, LogOut } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { logout } from '@/lib/firebase'
 import { useSettings } from '@/lib/settings'
 import AuthModal from './AuthModal'
 import AdminLoginModal from './admin/AdminLoginModal'
 import AdminPasscodeModal from './admin/AdminPasscodeModal'
-import ThemeToggle from './ThemeToggle'
 
 const NAV_ITEMS = [
   { href: '/pyqs', label: 'PYQ', icon: BookOpen },
@@ -20,6 +19,7 @@ const NAV_ITEMS = [
   { href: '/smart-test', label: 'Smart test', icon: Sparkles },
   { href: '/mistakes', label: 'Mistake book', icon: NotebookPen },
   { href: '/performance', label: 'Performance', icon: Activity },
+  { href: '/resources', label: 'Resources', icon: FolderOpen },
 ]
 
 export default function Navbar() {
@@ -72,7 +72,6 @@ export default function Navbar() {
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <ThemeToggle />
             {showAdminButton && <button onClick={() => setAdminGateOpen(true)} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-brand-200 hover:text-brand-700">Admin</button>}
             {!loading && (user ? <><Link href="/dashboard" className="grid h-9 w-9 place-items-center rounded-full bg-brand-50 text-brand-800" aria-label="My progress"><UserIcon size={17} /></Link><button onClick={() => logout()} className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="Sign out"><LogOut size={15} /></button></> : <button onClick={() => setAuthOpen(true)} className="rounded-full bg-brand-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-700 sm:px-4 sm:text-sm">Log in</button>)}
           </div>

@@ -4,7 +4,7 @@ rules_version = '2';
 //
 // Layout (see lib/admin-data.ts / components/admin/sections/*, and
 // components/PaymentFormModal.tsx for the user-facing upload):
-//   site/...                              — logo, QR code, and other site assets
+//   site/...                              — logo, QR code, resource PDFs and other site assets
 //   questions/{subjectId}/{chapterId}/... — question & solution images
 //   payment-proofs/{uid}/...              — user-uploaded payment screenshots
 //

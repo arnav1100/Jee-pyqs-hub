@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo } from 'react'
-import { Activity, ArrowRight, BookOpen, BookOpenCheck, CheckCircle2, Flame, NotebookPen, Sparkles, Target, Timer } from 'lucide-react'
+import { Activity, ArrowRight, BookOpen, BookOpenCheck, CheckCircle2, Flame, FolderOpen, NotebookPen, Sparkles, Target, Timer } from 'lucide-react'
 import { useQuestionLibrary } from '@/lib/question-library'
 import { useExamCatalog } from '@/lib/exam-catalog'
 import { useStudyData } from '@/lib/study-data'
@@ -34,7 +34,6 @@ export default function HomePage() {
   }, [questions])
 
   const totalQuestions = questions.filter((question) => question.examType === 'JEE Main').length
-  const previewMode = questions.length > 0 && questions.every((question) => question.source === 'sample')
   const accuracy = study.attempts.length
     ? Math.round((study.attempts.filter((attempt) => attempt.correct).length / study.attempts.length) * 100)
     : null
@@ -72,16 +71,17 @@ export default function HomePage() {
       </section>
 
       <div className="mx-auto max-w-6xl px-4">
-        {previewMode && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900"><strong>Preview note:</strong> This preview loads a few sample questions (Physics, Chemistry, Mathematics) so every screen works. Your saved browser questions remain on your live site’s origin and have not been changed.</div>}
 
         <section className="py-8 sm:py-10">
-          <div className="flex items-end justify-between gap-3"><div><p className="text-xs font-extrabold uppercase tracking-[.14em] text-brand-700">Choose what you need</p><h2 className="mt-1 font-display text-2xl font-bold text-ink-900 sm:text-3xl">Five simple ways to study</h2></div><span className="hidden rounded-full bg-yellow-100 px-3 py-1.5 text-xs font-bold text-yellow-800 sm:inline-flex">One chapter at a time ✨</span></div>
+          <div><p className="text-xs font-extrabold uppercase tracking-[.14em] text-brand-700">Choose what you need</p><h2 className="mt-1 font-display text-2xl font-bold text-ink-900 sm:text-3xl">Simple ways to study</h2></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <FeatureCard href="/pyqs" icon={<BookOpen size={19} />} title="PYQ practice" description="Find a question by subject, chapter, year, or shift." tone="mint" />
             <FeatureCard href="/tests" icon={<CheckCircle2 size={19} />} title="Tests" description="Chapter-wise, subject-wise or full test — your choice." tone="sun" />
             <FeatureCard href="/mock-tests" icon={<Timer size={19} />} title="Mock test" description="Take a timed mixed test from your question bank." tone="sky" />
             <FeatureCard href="/smart-test" icon={<Sparkles size={19} />} title="Smart test" description="Mix your past mistakes with fresh questions from a chapter." tone="lilac" />
             <FeatureCard href="/mistakes" icon={<NotebookPen size={19} />} title="Mistake book" description="Review, retry, and master the questions you missed." tone="coral" />
+            <FeatureCard href="/performance" icon={<Activity size={19} />} title="Performance" description="Accuracy, streaks, weak chapters and every finished test." tone="mint" />
+            <FeatureCard href="/resources" icon={<FolderOpen size={19} />} title="Resources" description="Free notes and PDFs — plus paid packs you can unlock with UPI." tone="sun" />
           </div>
         </section>
 

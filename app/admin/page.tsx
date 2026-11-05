@@ -16,6 +16,7 @@ import PaymentsManager from '@/components/admin/sections/PaymentsManager'
 import SettingsManager from '@/components/admin/sections/SettingsManager'
 import ExamCategoriesManager from '@/components/admin/sections/ExamCategoriesManager'
 import GlobalSyncManager from '@/components/admin/sections/GlobalSyncManager'
+import ResourcesManager from '@/components/admin/sections/ResourcesManager'
 
 export default function AdminPage() {
   const { user, loading, isAdmin, adminChecked } = useAuth()
@@ -71,6 +72,7 @@ export default function AdminPage() {
       {section === 'bulk-import' && <BulkImportManager />}
       {section === 'exams' && <ExamCategoriesManager />}
       {section === 'global-sync' && <GlobalSyncManager />}
+      {section === 'resources' && <ResourcesManager />}
       {section === 'users' && <UsersManager />}
       {section === 'payments' && <PaymentsManager />}
       {section === 'settings' && <SettingsManager />}

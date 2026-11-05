@@ -4,6 +4,7 @@ A student-first JEE Main previous-year-question practice platform, built with Ne
 
 ## Student experience
 
+- **Resources (`/resources`)** — free notes/PDFs, plus paid packs unlocked with a UPI payment + UTR verification (admin-managed in Admin → Resources).
 - **Home (`/`)** — a simplified, friendly launch page with five main study choices and Physics, Chemistry and Mathematics entry points.
 - **PYQ Library (`/pyqs`)** — chapter-wise question search with exam, year, subject and shift filters; additional filters remain available when needed.
 - **Chapter test (`/tests`)** — build a short, focused test from one subject and chapter.

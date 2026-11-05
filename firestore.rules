@@ -48,6 +48,25 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Study resources (PDFs, notes, links) shown on /resources. Publicly
+    // readable so any visitor can open free material; only admins can add,
+    // edit or delete the records themselves.
+    match /resources/{resourceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Paid-resource access requests. A visitor may submit their own pending
+    // request with a UTR / transaction id; only admins can read the whole
+    // queue or change the status (approve/reject).
+    match /resourceRequests/{requestId} {
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
     // Student learning data for the newer practice workspace. This remains
     // separate from legacy progress documents so existing local keys and
     // Firestore records are not overwritten during migration.

@@ -55,3 +55,20 @@ Agar aap Vercel par Firebase env vars (`NEXT_PUBLIC_FIREBASE_*`) already set rak
 - Firefox/Chrome me "new profile" ya incognito window use karna (wahan localStorage alag hota hai).
 - `public/questions.json` ko empty `[]` / `{}` se replace karna jab tak export backup na ho.
 - Localhost ya kisi doosre domain par test karna aur samajhna ki data gaya hai (wo alag origin hai).
+
+---
+
+## Resources section (PDF / notes / paid packs)
+
+- **Student page:** `/resources` — free files turant khulte hain; paid files par `Unlock for ₹X` button.
+- **Paid flow:** QR image + UPI ID + payment page link (jo Settings me set hai) → student UTR number daalta hai → submit → "We are verifying your payment" with 5-minute countdown → aap admin panel se approve karte hi file unlock.
+- **Admin panel → Resources:** PDF/notes/link upload, free ya paid (price), list + delete, aur **Payment verification queue** (Approve / Reject).
+- **Admin panel → Settings:** `qrImageUrl` (QR image), `upiId`, `paymentLink` — yahi paid modal me dikhte hain.
+
+### Firebase par ye rules publish karna zaroori hai
+
+1. Firebase Console → **Firestore → Rules** → repo ki `firestore.rules` file paste → publish.
+   Isme naye `resources` (public read, admin write) aur `resourceRequests` (student apni request banaye, admin approve kare) rules hain.
+2. Firebase Console → **Storage → Rules** → `storage.rules` publish (resource files `site/**` me jaati hain).
+
+> Firebase env vars na hone par sab kuch sirf browser-local chalta hai (demo ke liye): resource file browser me save hoti hai aur requests usi browser ke admin panel me dikhti hain.

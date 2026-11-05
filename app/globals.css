@@ -65,39 +65,6 @@
   }
 }
 
-/* A persistent, low-flash dark theme. The theme toggle only changes the
-   root class; these overrides keep existing page components readable. */
-html.dark body {
-  background-color: #0b1220;
-  color: #e2e8f0;
-}
-html.dark .bg-white { background-color: #111b2e !important; }
-html.dark .bg-slate-50 { background-color: #0f1728 !important; }
-html.dark .bg-slate-100 { background-color: #172238 !important; }
-html.dark .text-ink-900,
-html.dark .text-ink-800,
-html.dark .text-ink-700 { color: #e5edf9 !important; }
-html.dark .text-slate-600 { color: #c0cad9 !important; }
-html.dark .text-slate-500 { color: #9aa9bd !important; }
-html.dark .text-slate-400 { color: #7e8da3 !important; }
-html.dark .border-slate-200,
-html.dark .border-slate-100,
-html.dark .border-slate-300 { border-color: #26354d !important; }
-html.dark .bg-brand-50 { background-color: #172847 !important; }
-html.dark .bg-brand-100 { background-color: #1d3764 !important; }
-html.dark .bg-amber-50 { background-color: #332817 !important; }
-html.dark .bg-rose-50 { background-color: #351d29 !important; }
-html.dark .bg-emerald-50 { background-color: #142c29 !important; }
-html.dark .bg-violet-50 { background-color: #27213a !important; }
-html.dark input,
-html.dark textarea,
-html.dark select { background-color: #111b2e; color: #e5edf9; border-color: #33425b; }
-html.dark input::placeholder,
-html.dark textarea::placeholder { color: #7e8da3; }
-html.dark .katex { color: #e5edf9; }
-html.dark .shadow-card { box-shadow: 0 1px 2px rgba(0,0,0,.24), 0 8px 24px rgba(0,0,0,.14); }
-html.dark details > div { background-color: #111b2e; border-color: #26354d; }
-
 .celebration-piece {
   position: absolute;
   top: -12px;
