@@ -17,6 +17,7 @@ import SettingsManager from '@/components/admin/sections/SettingsManager'
 import ExamCategoriesManager from '@/components/admin/sections/ExamCategoriesManager'
 import GlobalSyncManager from '@/components/admin/sections/GlobalSyncManager'
 import ResourcesManager from '@/components/admin/sections/ResourcesManager'
+import PlansManager from '@/components/admin/sections/PlansManager'
 
 export default function AdminPage() {
   const { user, loading, isAdmin, adminChecked } = useAuth()
@@ -74,6 +75,7 @@ export default function AdminPage() {
       {section === 'global-sync' && <GlobalSyncManager />}
       {section === 'resources' && <ResourcesManager />}
       {section === 'users' && <UsersManager />}
+      {section === 'plans' && <PlansManager />}
       {section === 'payments' && <PaymentsManager />}
       {section === 'settings' && <SettingsManager />}
     </AdminShell>

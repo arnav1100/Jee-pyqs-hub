@@ -12,11 +12,14 @@ import {
   type AdminPayment,
 } from '@/lib/admin-data'
 import AdminModal from '../AdminModal'
+import { usePlans } from '@/lib/plans'
 
-const EMPTY_FORM: { name: string; email: string; plan: 'monthly' | 'lifetime'; amount: number; note: string } = {
+const EMPTY_FORM: { name: string; email: string; plan: string; planName: string; durationDays: number; amount: number; note: string } = {
   name: '',
   email: '',
   plan: 'monthly',
+  planName: 'Monthly Plan',
+  durationDays: 30,
   amount: 0,
   note: '',
 }
@@ -30,6 +33,7 @@ const STATUS_STYLES: Record<AdminPayment['status'], string> = {
 export default function PaymentsManager() {
   const { payments, loading } = useAdminPayments()
   const { users } = useAdminUsers()
+  const { plans } = usePlans()
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [busy, setBusy] = useState(false)
@@ -92,7 +96,7 @@ export default function PaymentsManager() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-ink-900">{p.name}</p>
                 <p className="truncate text-xs text-slate-500">
-                  {p.email} · {p.plan === 'monthly' ? 'Monthly' : 'Lifetime'} · ₹{p.amount}
+                  {p.email} · {p.planName || (p.plan === 'monthly' ? 'Monthly' : p.plan === 'lifetime' ? 'Lifetime' : p.plan)} · ₹{p.amount}
                   {p.transactionId ? ` · Txn: ${p.transactionId}` : ''}
                 </p>
                 {p.screenshotUrl && (
@@ -157,9 +161,25 @@ export default function PaymentsManager() {
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Plan">
-              <select value={form.plan} onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value as 'monthly' | 'lifetime' }))} className="admin-input">
-                <option value="monthly">Monthly</option>
-                <option value="lifetime">Lifetime</option>
+              <select
+                value={form.plan}
+                onChange={(e) => {
+                  const chosen = plans.find((plan) => plan.id === e.target.value)
+                  setForm((f) => ({
+                    ...f,
+                    plan: e.target.value,
+                    planName: chosen?.name || e.target.value,
+                    durationDays: chosen?.durationDays ?? f.durationDays,
+                    amount: chosen?.price ?? f.amount,
+                  }))
+                }}
+                className="admin-input"
+              >
+                {(plans.length ? plans : [{ id: 'monthly', name: 'Monthly', durationDays: 30, price: 0 }, { id: 'lifetime', name: 'Lifetime', durationDays: 0, price: 0 }] as typeof plans).map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name}
+                  </option>
+                ))}
               </select>
             </Field>
             <Field label="Amount (₹)">

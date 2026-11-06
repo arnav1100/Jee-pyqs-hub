@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { CheckCircle2, Clock, Crown, ExternalLink, Loader2, XCircle } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSettings } from '@/lib/settings'
+import { activePlans, usePlans, type Plan } from '@/lib/plans'
 import { useMyPayments } from '@/lib/admin-data'
 import PaymentFormModal from '@/components/PaymentFormModal'
 import AuthModal from '@/components/AuthModal'
@@ -23,12 +24,14 @@ const STATUS_ICON: Record<string, typeof Clock> = {
 
 export default function PremiumPage() {
   const { user, access } = useAuth()
-  const { settings, loading: settingsLoading } = useSettings()
+  const { settings } = useSettings()
+  const { plans } = usePlans()
   const { payments } = useMyPayments(user?.uid)
   const [authOpen, setAuthOpen] = useState(false)
-  const [formPlan, setFormPlan] = useState<'monthly' | 'lifetime' | null>(null)
+  const [formPlan, setFormPlan] = useState<Plan | null>(null)
+  const visiblePlans = activePlans(plans)
 
-  function handlePay(plan: 'monthly' | 'lifetime') {
+  function handlePay(plan: Plan) {
     if (!user) {
       setAuthOpen(true)
       return
@@ -58,25 +61,25 @@ export default function PremiumPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <PlanCard
-          title="Monthly Plan"
-          price={settings.monthlyPrice}
-          period="/ 30 days"
-          features={['Full access to all chapters', 'Practice + Timed tests', 'Bookmarks & progress tracking']}
-          onSelect={() => handlePay('monthly')}
-          loading={settingsLoading}
-        />
-        <PlanCard
-          title="Lifetime Plan"
-          price={settings.lifetimePrice}
-          period="one-time"
-          highlight
-          features={['Everything in Monthly', 'Access forever, no renewals', 'All future content included']}
-          onSelect={() => handlePay('lifetime')}
-          loading={settingsLoading}
-        />
-      </div>
+      {visiblePlans.length === 0 ? (
+        <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+          No plans are available right now. Please check back soon.
+        </div>
+      ) : (
+        <div className={`grid grid-cols-1 gap-4 ${visiblePlans.length > 1 ? 'sm:grid-cols-2' : ''}`}>
+          {visiblePlans.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              title={plan.name}
+              price={plan.price}
+              period={plan.period}
+              features={plan.features}
+              highlight={plan.highlight}
+              onSelect={() => handlePay(plan)}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="mt-8 rounded-xl2 border border-slate-200 bg-white p-5 shadow-card">
         <h2 className="font-display text-sm font-bold text-ink-900">How to pay</h2>
@@ -133,7 +136,7 @@ export default function PremiumPage() {
                 >
                   <Icon size={16} className="shrink-0 text-slate-400" />
                   <span className="flex-1 text-ink-800">
-                    {p.plan === 'monthly' ? 'Monthly' : 'Lifetime'} · ₹{p.amount}
+                    {p.planName || (p.plan === 'monthly' ? 'Monthly' : p.plan === 'lifetime' ? 'Lifetime' : p.plan)} · ₹{p.amount}
                     {p.transactionId ? ` · Txn ${p.transactionId}` : ''}
                   </span>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[p.status]}`}>
@@ -150,8 +153,7 @@ export default function PremiumPage() {
       {formPlan && (
         <PaymentFormModal
           open
-          plan={formPlan}
-          amount={formPlan === 'monthly' ? settings.monthlyPrice : settings.lifetimePrice}
+          plan={{ id: formPlan.id, name: formPlan.name, price: formPlan.price, durationDays: formPlan.durationDays }}
           onClose={() => setFormPlan(null)}
         />
       )}

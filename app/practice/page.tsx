@@ -3,15 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Bookmark, Check, ChevronLeft, ChevronRight, Flag, Loader2, RotateCcw, Sparkles, Timer } from 'lucide-react'
+import { Bookmark, Check, ChevronLeft, ChevronRight, Flag, LayoutGrid, Loader2, RotateCcw, Sparkles, Timer } from 'lucide-react'
 import DifficultyBadge from '@/components/DifficultyBadge'
 import MathText from '@/components/MathText'
-import QuestionNavigator from '@/components/QuestionNavigator'
+import QuestionPalette from '@/components/QuestionPalette'
 import QuestionCard from '@/components/QuestionCard'
 import Celebration from '@/components/Celebration'
 import { useQuestionLibrary, inferExamNames, type QuestionLibraryItem } from '@/lib/question-library'
 import { useStudyData, isStudyAnswerCorrect } from '@/lib/study-data'
 import { useExamCatalog } from '@/lib/exam-catalog'
+import PremiumGate from '@/components/PremiumGate'
 
 function formatDuration(seconds: number) {
   const minutes = Math.floor(seconds / 60)
@@ -19,6 +20,14 @@ function formatDuration(seconds: number) {
 }
 
 export default function PracticePage() {
+  return (
+    <PremiumGate>
+      <PracticeWorkspace />
+    </PremiumGate>
+  )
+}
+
+function PracticeWorkspace() {
   const router = useRouter()
   const { questions, loading } = useQuestionLibrary()
   const { categories } = useExamCatalog()
@@ -28,6 +37,7 @@ export default function PracticePage() {
   const requestedSource = routeParams.source || 'all'
   const [exam, setExam] = useState('JEE Main')
   const [index, setIndex] = useState(0)
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [seconds, setSeconds] = useState(0)
@@ -185,7 +195,7 @@ export default function PracticePage() {
 
         <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-card lg:sticky lg:top-24">
           <div className="flex items-center justify-between"><h2 className="font-display text-sm font-bold text-ink-900">Question palette</h2><span className="text-[11px] text-slate-400">1–4 · arrows · M · B</span></div>
-          <div className="mt-3 max-h-52 overflow-y-auto"><QuestionNavigator total={sessionsQuestions.length} currentIndex={index} answeredIndices={answeredIndices} bookmarkedIndices={bookmarkedIndices} onSelect={goTo} /></div>
+          <div className="mt-3"><QuestionPalette total={sessionsQuestions.length} currentIndex={index} answeredIndices={answeredIndices} bookmarkedIndices={bookmarkedIndices} onSelect={goTo} open={paletteOpen} onOpenChange={setPaletteOpen} /></div>
           <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-slate-500"><span>● Checked</span><span>○ Unchecked</span><span>★ Bookmarked</span><span>🟣 Review</span></div>
           <div className="mt-4 rounded-xl bg-slate-50 p-3"><div className="flex justify-between text-xs"><span className="text-slate-500">Session progress</span><strong className="text-ink-900">{answeredIndices.size}/{sessionsQuestions.length}</strong></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${Math.round((answeredIndices.size / sessionsQuestions.length) * 100)}%` }} /></div></div>
         </aside>
@@ -193,7 +203,8 @@ export default function PracticePage() {
 
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-3">
-          <button onClick={() => goTo(index - 1)} disabled={index === 0} className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-ink-700 disabled:opacity-40"><ChevronLeft size={16} /> Prev</button>
+          <button onClick={() => setPaletteOpen(true)} aria-label="Open question palette" className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-2.5 text-sm font-semibold text-ink-700 lg:hidden"><LayoutGrid size={16} /><span className="text-xs font-bold">{answeredIndices.size}/{sessionsQuestions.length}</span></button>
+          <button onClick={() => goTo(index - 1)} disabled={index === 0} className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-2.5 text-sm font-semibold text-ink-700 disabled:opacity-40 sm:px-3"><ChevronLeft size={16} /></button>
           <button onClick={handleClear} disabled={!currentAnswer} className="hidden items-center gap-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 disabled:opacity-40 sm:inline-flex"><RotateCcw size={14} /> Clear</button>
           {currentChecked ? <button onClick={() => goTo(index + 1)} className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-brand-600 py-2.5 text-sm font-bold text-white">Next <ChevronRight size={16} /></button> : <button onClick={checkAnswer} disabled={!currentAnswer} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink-900 py-2.5 text-sm font-bold text-white disabled:opacity-40"><Check size={16} /> Check answer</button>}
           <button onClick={() => study.toggleBookmark(question.id)} className={`grid h-11 w-11 place-items-center rounded-xl border ${isBookmarked ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500'}`} aria-label="Bookmark question"><Bookmark size={17} fill={isBookmarked ? 'currentColor' : 'none'} /></button>

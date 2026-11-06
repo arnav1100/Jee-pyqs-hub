@@ -17,6 +17,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Never let the browser zoom out below the device width (which used to
+  // reveal a shrunken, shifted copy of the whole site on phones), but keep
+  // pinch-zoom available for accessibility.
+  minimumScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: 'cover',
   themeColor: '#108b77',
 }
 

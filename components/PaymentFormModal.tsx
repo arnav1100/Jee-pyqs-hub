@@ -4,21 +4,29 @@ import { useState } from 'react'
 import { X, Loader2, UploadCloud, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { submitPayment, uploadImage } from '@/lib/admin-data'
+import { IMAGE_ACCEPT, MAX_IMAGE_BYTES, formatBytes } from '@/lib/upload'
+
+export interface PaymentPlanChoice {
+  id: string
+  name: string
+  price: number
+  durationDays: number
+}
 
 interface PaymentFormModalProps {
   open: boolean
   onClose: () => void
-  plan: 'monthly' | 'lifetime'
-  amount: number
+  plan: PaymentPlanChoice
 }
 
-export default function PaymentFormModal({ open, onClose, plan, amount }: PaymentFormModalProps) {
+export default function PaymentFormModal({ open, onClose, plan }: PaymentFormModalProps) {
   const { user } = useAuth()
   const [name, setName] = useState(user?.displayName ?? '')
   const [email, setEmail] = useState(user?.email ?? '')
   const [transactionId, setTransactionId] = useState('')
   const [screenshot, setScreenshot] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
 
@@ -52,26 +60,35 @@ export default function PaymentFormModal({ open, onClose, plan, amount }: Paymen
       setError('Please attach a payment screenshot.')
       return
     }
+    if (screenshot.size > MAX_IMAGE_BYTES) {
+      setError(`Screenshot bahut bada hai (${formatBytes(screenshot.size)}). ${formatBytes(MAX_IMAGE_BYTES)} tak allowed — ya chhota crop karke upload karein.`)
+      return
+    }
 
     setBusy(true)
     try {
+      setProgress(0)
       const screenshotUrl = await uploadImage(
         screenshot,
-        `payment-proofs/${user.uid}/${Date.now()}-${screenshot.name}`
+        `payment-proofs/${user.uid}/${Date.now()}-${screenshot.name}`,
+        { onProgress: setProgress, timeoutMs: 120_000, maxBytes: MAX_IMAGE_BYTES },
       )
       await submitPayment(user.uid, {
         name: name.trim(),
         email: email.trim(),
-        plan,
-        amount,
+        plan: plan.id,
+        planName: plan.name,
+        durationDays: plan.durationDays,
+        amount: plan.price,
         transactionId: transactionId.trim(),
         screenshotUrl,
       })
       setDone(true)
     } catch (err) {
-      setError('Could not submit your payment. Please try again.')
+      setError(err instanceof Error ? err.message : 'Could not submit your payment. Please try again.')
     } finally {
       setBusy(false)
+      setProgress(0)
     }
   }
 
@@ -91,7 +108,7 @@ export default function PaymentFormModal({ open, onClose, plan, amount }: Paymen
           <div className="py-4 text-center">
             <CheckCircle2 className="mx-auto mb-3 text-easy" size={40} />
             <p className="text-sm text-ink-800">
-              Thanks! Your {plan === 'monthly' ? 'Monthly' : 'Lifetime'} plan request is pending admin review.
+              Thanks! Your <strong>{plan.name}</strong> request is pending admin review.
               You&apos;ll get full access as soon as it&apos;s approved.
             </p>
             <button
@@ -104,7 +121,7 @@ export default function PaymentFormModal({ open, onClose, plan, amount }: Paymen
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <p className="text-xs text-slate-500">
-              {plan === 'monthly' ? 'Monthly Plan' : 'Lifetime Plan'} · ₹{amount} — fill this in after you&apos;ve paid via the QR/UPI details.
+              {plan.name} · ₹{plan.price} — fill this in after you&apos;ve paid via the QR/UPI details.
             </p>
             <Field label="Name">
               <input value={name} onChange={(e) => setName(e.target.value)} className="admin-input" />
@@ -126,7 +143,7 @@ export default function PaymentFormModal({ open, onClose, plan, amount }: Paymen
                 {screenshot ? screenshot.name : 'Upload screenshot'}
                 <input
                   type="file"
-                  accept="image/*"
+                  accept={IMAGE_ACCEPT}
                   className="hidden"
                   onChange={(e) => setScreenshot(e.target.files?.[0] ?? null)}
                 />
@@ -141,7 +158,7 @@ export default function PaymentFormModal({ open, onClose, plan, amount }: Paymen
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
             >
               {busy && <Loader2 size={14} className="animate-spin" />}
-              I Have Paid — Submit
+              {busy ? (progress > 0 ? `Uploading screenshot… ${progress}%` : 'Submitting…') : 'I Have Paid — Submit'}
             </button>
           </form>
         )}

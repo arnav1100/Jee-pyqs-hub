@@ -18,8 +18,9 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore'
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { ref, deleteObject } from 'firebase/storage'
 import { db, storage, isConfigured } from './firebase'
+import { uploadWithProgress } from './upload'
 import { collectQuestionRecords, normalizeQuestionRecord, readLegacyQuestionRawRecords } from './question-library'
 import type { Difficulty, ExamType, Option, QuestionType } from '@/data/mockData'
 
@@ -91,7 +92,12 @@ export interface AdminPayment {
   uid?: string
   name: string
   email: string
-  plan: 'monthly' | 'lifetime'
+  /** Plan id chosen on /premium. Free-form so admins can invent new plans. */
+  plan: string
+  /** Human-readable plan name, shown in the admin queue and receipts. */
+  planName?: string
+  /** Plan length in days; 0 = lifetime. Drives the access granted on approval. */
+  durationDays?: number
   amount: number
   status: 'pending' | 'verified' | 'rejected'
   note?: string
@@ -348,10 +354,17 @@ export async function deleteQuestion(
 /* -------------------------------- Storage ----------------------------------- */
 
 /** Uploads a file to Firebase Storage under `path` and returns its download URL. */
-export async function uploadImage(file: File, path: string): Promise<string> {
-  const storageRef = ref(storage, path)
-  await uploadBytes(storageRef, file)
-  return getDownloadURL(storageRef)
+/**
+ * Uploads an image/file and returns its public URL.
+ * Uses the resumable uploader with a hard timeout so a misconfigured Storage
+ * bucket can never leave a form stuck on “Uploading…” forever.
+ */
+export async function uploadImage(
+  file: File,
+  path: string,
+  options?: { onProgress?: (percent: number) => void; timeoutMs?: number; maxBytes?: number }
+): Promise<string> {
+  return uploadWithProgress(file, path, options)
 }
 
 export async function deleteImageByUrl(url: string) {
@@ -426,7 +439,9 @@ export async function submitPayment(
   data: {
     name: string
     email: string
-    plan: 'monthly' | 'lifetime'
+    plan: string
+    planName?: string
+    durationDays?: number
     amount: number
     transactionId: string
     screenshotUrl: string
@@ -456,10 +471,16 @@ export async function approvePayment(payment: AdminPayment) {
   }
 
   const now = new Date()
-  const planExpiresAt =
-    payment.plan === 'monthly'
-      ? new Date(now.getTime() + MONTHLY_PLAN_DAYS * 24 * 60 * 60 * 1000).toISOString()
-      : null // lifetime = unlimited, no expiry
+  // Admins create plans with any duration (see components/admin/sections/
+  // PlansManager.tsx). durationDays === 0 means lifetime. Older payment rows
+  // that only carry plan: 'monthly' | 'lifetime' still work via the fallback.
+  const days = typeof payment.durationDays === 'number'
+    ? payment.durationDays
+    : payment.plan === 'lifetime'
+      ? 0
+      : MONTHLY_PLAN_DAYS
+  const planExpiresAt = days > 0 ? new Date(now.getTime() + days * 24 * 60 * 60 * 1000).toISOString() : null
+  const grantedPlan: 'monthly' | 'lifetime' = days > 0 ? 'monthly' : 'lifetime'
 
   const paymentRef = doc(db, 'payments', payment.id)
   const userRef = doc(db, 'users', payment.uid)
@@ -467,9 +488,11 @@ export async function approvePayment(payment: AdminPayment) {
 
   const batch = writeBatch(db)
   batch.update(paymentRef, { status: 'verified' })
-  batch.update(userRef, { plan: payment.plan, planExpiresAt })
+  batch.update(userRef, { plan: grantedPlan, planExpiresAt })
   batch.set(subscriptionRef, {
-    plan: payment.plan,
+    plan: grantedPlan,
+    planId: payment.plan,
+    planName: payment.planName ?? null,
     amount: payment.amount,
     paymentId: payment.id,
     startedAt: serverTimestamp(),

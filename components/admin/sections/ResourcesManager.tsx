@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, ExternalLink, Loader2, Plus, Trash2, UploadCloud, 
 import { useAuth } from '@/lib/auth-context'
 import { isConfigured } from '@/lib/firebase'
 import { uploadImage } from '@/lib/admin-data'
+import { MAX_RESOURCE_BYTES, RESOURCE_ACCEPT, formatBytes, isFirebaseStorageConfigured } from '@/lib/upload'
 import { useSettings } from '@/lib/settings'
 import {
   readFileAsDataUrl,
@@ -44,25 +45,39 @@ export default function ResourcesManager() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
   const [reviewingId, setReviewingId] = useState<string | null>(null)
 
   async function handleFile(file: File | null) {
     if (!file) return
     setError(null)
+    setMessage(null)
     setUploading(true)
+    setProgress(0)
     try {
+      if (file.size > MAX_RESOURCE_BYTES) {
+        throw new Error(`File bahut badi hai (${formatBytes(file.size)}). ${formatBytes(MAX_RESOURCE_BYTES)} tak upload ho sakti hai — ya link paste karein.`)
+      }
       if (isConfigured && user) {
-        const url = await uploadImage(file, `site/resources/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '-')}`)
+        const url = await uploadImage(
+          file,
+          `site/resources/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '-')}`,
+          { onProgress: setProgress, timeoutMs: 180_000, maxBytes: MAX_RESOURCE_BYTES },
+        )
         setForm((current) => ({ ...current, fileUrl: url, fileName: file.name }))
+        setMessage('File upload ho gayi. Ab "Save resource" dabayein.')
       } else {
+        // No Firebase Storage: keep the file in this browser only, with a
+        // hard size cap and a clear explanation instead of a silent hang.
         const dataUrl = await readFileAsDataUrl(file)
         setForm((current) => ({ ...current, fileUrl: dataUrl, fileName: file.name }))
+        setMessage('File is browser me save hui (Firebase configured nahi). Live site par Firebase Storage chalu karein.')
       }
-      setMessage('File ready. Ab "Save resource" dabayein.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload fail ho gaya.')
+      setError(err instanceof Error ? err.message : 'Upload fail ho gaya — dobara try karein.')
     } finally {
       setUploading(false)
+      setProgress(0)
     }
   }
 
@@ -133,15 +148,36 @@ export default function ResourcesManager() {
 
           <div className="sm:col-span-2 rounded-2xl border border-dashed border-slate-300 p-3">
             <div className="flex flex-wrap items-center gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-brand-600 px-3 py-2 text-xs font-bold text-white hover:bg-brand-700">
-                {uploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {uploading ? 'Uploading…' : 'Upload PDF / file'}
-                <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(event) => handleFile(event.target.files?.[0] ?? null)} />
+              <label className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-white ${uploading ? 'cursor-wait bg-slate-400' : 'cursor-pointer bg-brand-600 hover:bg-brand-700'}`}>
+                {uploading ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />} {uploading ? `Uploading… ${progress}%` : 'Upload PDF / file'}
+                <input
+                  type="file"
+                  accept={RESOURCE_ACCEPT}
+                  disabled={uploading}
+                  className="hidden"
+                  onChange={(event) => {
+                    handleFile(event.target.files?.[0] ?? null)
+                    event.target.value = ''
+                  }}
+                />
               </label>
-              <span className="text-[11px] text-slate-500">{form.fileName || (form.fileUrl ? 'File ready' : 'ya neeche link paste karein')}</span>
+              <span className="min-w-0 flex-1 truncate text-[11px] text-slate-500">{form.fileName || (form.fileUrl ? 'File ready' : `PDF/image/notes · max ${formatBytes(MAX_RESOURCE_BYTES)} · ya neeche link paste karein`)}</span>
               {form.fileUrl && <a href={form.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-700">Preview <ExternalLink size={11} /></a>}
             </div>
+            {uploading && (
+              <div className="mt-2">
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                  <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${Math.max(4, progress)}%` }} />
+                </div>
+                <p className="mt-1 text-[10px] text-slate-500">{progress < 100 ? 'Upload ho raha hai — is tab ko band mat karein.' : 'Finishing…'}</p>
+              </div>
+            )}
             <input value={form.fileUrl.startsWith('data:') ? '' : form.fileUrl} onChange={(event) => setForm({ ...form, fileUrl: event.target.value, fileName: '' })} placeholder="https://drive.google.com/… (PDF ya notes ka link)" className="admin-input mt-2 text-xs" />
-            <p className="mt-1 text-[10px] text-slate-400">{isConfigured ? 'Firebase configured — file Storage me upload hoti hai, sabko dikhti hai.' : 'Firebase configured nahi hai — file sirf is browser me save hogi (1.5 MB tak). Live site par Firebase env vars ke saath upload karein.'}</p>
+            <p className="mt-1 text-[10px] text-slate-400">
+              {isFirebaseStorageConfigured
+                ? `Firebase Storage ready — file sabke liye upload hoti hai (max ${formatBytes(MAX_RESOURCE_BYTES)}). Progress % upar dikhega.`
+                : 'Firebase Storage configured nahi hai — file sirf is browser me save hogi (1.5 MB tak). Badi PDF ke liye link paste karein ya Vercel me Firebase env vars add karein.'}
+            </p>
           </div>
 
           {error && <p className="sm:col-span-2 rounded-lg bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{error}</p>}

@@ -9,10 +9,19 @@ import { useExamCatalog } from '@/lib/exam-catalog'
 import { useStudyData } from '@/lib/study-data'
 import { startMockSession, type MockSessionConfig } from '@/lib/mock-test-session'
 import { CORE_SUBJECTS, displaySubject, sameChapter, sameSubject, subjectKey, uniqueChapters } from '@/lib/subject-utils'
+import PremiumGate from '@/components/PremiumGate'
 
 const QUESTION_COUNTS = [5, 10, 15, 20]
 
 export default function SmartTestPage() {
+  return (
+    <PremiumGate>
+      <SmartTestBuilder />
+    </PremiumGate>
+  )
+}
+
+function SmartTestBuilder() {
   const { questions, loading } = useQuestionLibrary()
   const { categories } = useExamCatalog()
   const study = useStudyData()

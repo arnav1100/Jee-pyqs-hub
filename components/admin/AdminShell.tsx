@@ -17,6 +17,7 @@ import {
   Globe2,
   Shapes,
   FolderOpen,
+  CreditCard,
 } from 'lucide-react'
 import { useState } from 'react'
 import { logout } from '@/lib/firebase'
@@ -32,6 +33,7 @@ export type AdminSection =
   | 'global-sync'
   | 'resources'
   | 'users'
+  | 'plans'
   | 'payments'
   | 'settings'
 
@@ -45,6 +47,7 @@ const NAV_ITEMS: { key: AdminSection; label: string; icon: typeof LayoutDashboar
   { key: 'global-sync', label: 'Global Sync', icon: Globe2 },
   { key: 'resources', label: 'Resources', icon: FolderOpen },
   { key: 'users', label: 'Users', icon: Users },
+  { key: 'plans', label: 'Plans & Pricing', icon: CreditCard },
   { key: 'payments', label: 'Payments', icon: Wallet },
   { key: 'settings', label: 'Settings', icon: SettingsIcon },
 ]

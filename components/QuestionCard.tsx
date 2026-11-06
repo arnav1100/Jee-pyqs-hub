@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import clsx from 'clsx'
 import { Bookmark, CheckCircle2, XCircle } from 'lucide-react'
 import type { Question } from '@/data/mockData'
@@ -45,9 +44,16 @@ export default function QuestionCard({
       {(question.topic || question.roiTag) && <div className="mt-2 flex flex-wrap gap-2">{question.topic && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">Topic: {question.topic}</span>}{question.roiTag && <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700">⚡ {question.roiTag}</span>}</div>}
 
       {question.imageUrl && (
-        <div className="relative mt-3 aspect-video w-full overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
-          <Image src={question.imageUrl} alt={'Figure for question ' + question.number} fill className="object-contain" />
-        </div>
+        // Natural aspect ratio (not a fixed 16:9 box) so exported question
+        // images — which are often very wide or very tall — stay readable
+        // instead of being shrunk into a letterboxed strip.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={question.imageUrl}
+          alt={'Question ' + question.number}
+          loading="lazy"
+          className="mt-3 w-full rounded-lg border border-slate-100 bg-white object-contain"
+        />
       )}
 
       {question.questionType === 'numerical' ? (

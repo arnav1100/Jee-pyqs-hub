@@ -83,8 +83,13 @@ function writeLocal<T>(key: string, rows: T[]) {
   try {
     window.localStorage.setItem(key, JSON.stringify(rows))
     notifyLocalChange()
-  } catch {
-    // Storage can be full or blocked; the UI still works for this session.
+  } catch (error) {
+    // Browser storage is ~5 MB. A PDF saved as a data URL is what usually
+    // blows it, and silently swallowing that used to look like a failed save.
+    if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.code === 22)) {
+      throw new Error('Browser storage full ho gaya (PDF data URL ke liye). Firebase Storage on karein — ya file ka direct link paste karein.')
+    }
+    throw error
   }
 }
 
@@ -259,18 +264,7 @@ export function useUnlockedResources() {
 }
 
 /** Reads a file as a data URL so paid/free files still work without Firebase. */
-export function readFileAsDataUrl(file: File, maxBytes = 1_500_000): Promise<string> {
-  return new Promise((resolve, reject) => {
-    if (file.size > maxBytes) {
-      reject(new Error(`File is too large (${Math.round(file.size / 1024)} KB). Keep it under ${Math.round(maxBytes / 1024)} KB, or paste a link instead.`))
-      return
-    }
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = () => reject(new Error('Could not read that file.'))
-    reader.readAsDataURL(file)
-  })
-}
+export { readFileAsDataUrl } from './upload'
 
 export function useVerificationCountdown(submittedAt: number) {
   const [now, setNow] = useState(() => Date.now())

@@ -7,10 +7,11 @@ import { useAuth } from '@/lib/auth-context'
 import AuthModal from './AuthModal'
 
 /**
- * Wraps chapter/practice/test content. Renders children when the user has
- * an active 12h trial or an active paid plan; otherwise shows a locked
- * upsell pointing at /premium. Signed-out visitors are asked to sign in
- * first (which starts their trial).
+ * Wraps every question-solving surface (chapter practice, chapter test,
+ * mock/smart test sessions, practice workspace). Renders children only when
+ * the visitor is signed in AND has an active 24h free trial or a paid plan —
+ * so a brand-new, signed-out visitor can browse the library but cannot solve
+ * questions until they create the free account that starts their trial.
  */
 export default function PremiumGate({ children }: { children: React.ReactNode }) {
   const { user, loading, profileLoading, access } = useAuth()
@@ -28,8 +29,8 @@ export default function PremiumGate({ children }: { children: React.ReactNode })
     return (
       <>
         <LockedPanel
-          title="Sign in to start your free trial"
-          message="Create a free account to get 12 hours of full access to every chapter and question."
+          title="Sign in to start your free 24-hour access"
+          message="Create a free account (Google or email) to unlock every chapter, question, test and solution for 24 hours — no payment needed."
           ctaLabel="Sign in / Sign up"
           onCta={() => setAuthOpen(true)}
         />
@@ -41,8 +42,8 @@ export default function PremiumGate({ children }: { children: React.ReactNode })
   if (!access.hasAccess) {
     return (
       <LockedPanel
-        title="Your free trial has ended"
-        message="Upgrade to Monthly or Lifetime to unlock every chapter and question again."
+        title="Your free 24-hour access has ended"
+        message="Pick a plan to keep practising — every chapter, PYQ, mock test and solution stays unlocked while your plan is active."
         ctaLabel="View Premium Plans"
         href="/premium"
       />

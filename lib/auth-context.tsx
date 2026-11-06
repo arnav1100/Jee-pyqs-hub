@@ -4,7 +4,13 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { subscribeToAuth, checkIsAdmin, db, isConfigured, type User } from './firebase'
 
-export const TRIAL_DURATION_MS = 12 * 60 * 60 * 1000 // 12 hour free trial
+/**
+ * Free trial length for every NEW account. The trial starts automatically on
+ * first sign-in — no card, no manual activation. Change this single constant
+ * to change the trial for future sign-ups (existing accounts keep the window
+ * they were created with, since trialEnd is stored on their profile).
+ */
+export const TRIAL_DURATION_MS = 24 * 60 * 60 * 1000 // 24 hour free trial
 
 export type PlanId = 'free' | 'monthly' | 'lifetime'
 
@@ -21,7 +27,7 @@ export interface UserProfile {
 interface AccessStatus {
   /** True if the user currently has full access (active trial OR active paid plan). */
   hasAccess: boolean
-  /** True while still inside the 12h free trial window. */
+  /** True while still inside the 24h free trial window. */
   isTrialActive: boolean
   /** True if plan is 'lifetime', or 'monthly' with a non-expired planExpiresAt. */
   isPremium: boolean
@@ -77,8 +83,12 @@ export function computeAccess(data: Partial<UserProfile> | null | undefined): Ac
   const isTrialActive = Boolean(trialEnd && trialEnd.getTime() > Date.now())
 
   const planExpiresAt = toDate(data.planExpiresAt)
+  // Admin-created plans can be any length (7 days, 90 days, exam-season pass…),
+  // so access is granted for any paid plan whose expiry is still in the future,
+  // plus lifetime plans which have no expiry at all.
   const isPremium =
-    data.plan === 'lifetime' || (data.plan === 'monthly' && Boolean(planExpiresAt && planExpiresAt.getTime() > Date.now()))
+    data.plan === 'lifetime' ||
+    Boolean(planExpiresAt && planExpiresAt.getTime() > Date.now())
 
   return {
     hasAccess: isTrialActive || isPremium,
@@ -112,7 +122,7 @@ async function upsertUserProfile(user: User) {
       return
     }
 
-    // Brand new user — activate the 12 hour free trial.
+    // Brand new user — activate the 24 hour free trial.
     const now = new Date()
     const trialEnd = new Date(now.getTime() + TRIAL_DURATION_MS)
     await setDoc(ref, {

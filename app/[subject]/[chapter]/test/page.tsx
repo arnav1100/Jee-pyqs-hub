@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { notFound, useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Timer, CheckCircle2, XCircle, RotateCcw, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Timer, CheckCircle2, XCircle, RotateCcw, Loader2, LayoutGrid } from 'lucide-react'
 import { useSubjects, useChapters, useQuestions } from '@/lib/content'
 import { isAnswerCorrect } from '@/lib/answers'
-import QuestionNavigator from '@/components/QuestionNavigator'
+import QuestionPalette from '@/components/QuestionPalette'
 import DifficultyBadge from '@/components/DifficultyBadge'
 import PremiumGate from '@/components/PremiumGate'
 import MathText from '@/components/MathText'
@@ -54,6 +54,7 @@ function TestPageContent() {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const recordedRef = useRef(false)
 
   // Persist the attempt (score, correct/wrong counts) once per submission,
@@ -224,13 +225,17 @@ function TestPageContent() {
               <Timer size={13} /> {formatTime(secondsLeft)}
             </span>
           </div>
-          <QuestionNavigator
-            total={chapterQuestions.length}
-            currentIndex={index}
-            answeredIndices={answeredIndices}
-            bookmarkedIndices={new Set()}
-            onSelect={setIndex}
-          />
+          <div className="px-4 pb-3">
+            <QuestionPalette
+              total={chapterQuestions.length}
+              currentIndex={index}
+              answeredIndices={answeredIndices}
+              bookmarkedIndices={new Set()}
+              onSelect={setIndex}
+              open={paletteOpen}
+              onOpenChange={setPaletteOpen}
+            />
+          </div>
         </div>
       </div>
 
@@ -294,11 +299,19 @@ function TestPageContent() {
       </div>
 
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 py-3">
+        <div className="mx-auto flex max-w-2xl items-center gap-1.5 px-3 py-2.5 sm:gap-2 sm:px-4 sm:py-3">
+          <button
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Open question palette"
+            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-2.5 text-sm font-semibold text-ink-700 sm:hidden"
+          >
+            <LayoutGrid size={16} />
+            <span className="text-xs font-bold">{answeredIndices.size}</span>
+          </button>
           <button
             onClick={() => setIndex((i) => Math.max(0, i - 1))}
             disabled={index === 0}
-            className="flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-ink-700 disabled:opacity-40"
+            className="flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 px-2.5 py-2.5 text-sm font-semibold text-ink-700 disabled:opacity-40 sm:px-3"
           >
             <ChevronLeft size={16} /> Prev
           </button>

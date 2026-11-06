@@ -5,10 +5,29 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* The page must never be wider than the viewport: a single overflowing
+       child (wide equation, image, table) used to make the whole site pan
+       sideways / shrink into view when the user pinched or swiped the
+       question palette on a phone. */
+    overflow-x: hidden;
+    max-width: 100%;
+    -webkit-text-size-adjust: 100%;
   }
   body {
     @apply text-ink-900 font-body antialiased;
     background-color: #f7fbf8;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    max-width: 100vw;
+    min-width: 0;
+  }
+  img, svg, video, canvas, iframe {
+    max-width: 100%;
+  }
+  /* Long unbroken strings (URLs, chemical names) must wrap instead of
+     stretching the layout. */
+  p, li, td, th {
+    overflow-wrap: anywhere;
   }
   h1, h2, h3, h4 {
     @apply font-display;

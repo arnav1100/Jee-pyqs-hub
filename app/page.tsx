@@ -52,6 +52,9 @@ export default function HomePage() {
               <Link href="/pyqs" className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-extrabold text-[#126a60] shadow-lg transition hover:-translate-y-0.5 hover:bg-yellow-50">Practice PYQs <ArrowRight size={16} /></Link>
               <Link href="/smart-test" className="inline-flex items-center gap-2 rounded-xl border border-white/35 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/20"><Sparkles size={16} /> Try Smart Test</Link>
             </div>
+            <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white/90">
+              <CheckCircle2 size={13} /> Free 24-hour full access on sign-up · no card needed
+            </p>
           </div>
 
           <div className="rounded-3xl border border-white/25 bg-white/15 p-5 shadow-xl backdrop-blur-md sm:p-6">

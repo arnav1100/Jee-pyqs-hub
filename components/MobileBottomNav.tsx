@@ -16,7 +16,15 @@ const ITEMS = [
 
 export default function MobileBottomNav() {
   const pathname = usePathname() || '/'
-  if (pathname.startsWith('/admin') || pathname === '/practice' || pathname.startsWith('/mock-tests/session')) return null
+  // Hide the global study nav inside exam-like screens — those pages have
+  // their own fixed action bar and a floating palette, and two bottom bars
+  // overlapping was making the layout feel broken on phones.
+  const isSessionRoute =
+    pathname === '/practice' ||
+    pathname.startsWith('/mock-tests/session') ||
+    pathname.endsWith('/practice') ||
+    (pathname.endsWith('/test') && pathname.split('/').filter(Boolean).length >= 4)
+  if (pathname.startsWith('/admin') || isSessionRoute) return null
 
   return (
     <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-emerald-100 bg-white/95 px-1 pt-1.5 shadow-nav backdrop-blur md:hidden" aria-label="Study navigation">
